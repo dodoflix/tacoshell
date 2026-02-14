@@ -1,0 +1,18 @@
+[package]
+name = "tacoshell-transfer"
+description = "File transfer protocols (SFTP/FTP) for Tacoshell"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+tacoshell-core.workspace = true
+tacoshell-ssh.workspace = true
+ssh2.workspace = true
+chrono.workspace = true
+tokio.workspace = true
+anyhow.workspace = true
+thiserror.workspace = true
+tracing.workspace = true
+
+

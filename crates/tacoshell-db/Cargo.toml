@@ -1,0 +1,19 @@
+[package]
+name = "tacoshell-db"
+description = "SQLite database layer for Tacoshell"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+tacoshell-core.workspace = true
+rusqlite.workspace = true
+tokio.workspace = true
+anyhow.workspace = true
+thiserror.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+uuid.workspace = true
+chrono.workspace = true
+tracing.workspace = true
+

@@ -1,0 +1,16 @@
+[package]
+name = "tacoshell-secrets"
+description = "Secret storage and encryption for Tacoshell"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+tacoshell-core.workspace = true
+age.workspace = true
+rand.workspace = true
+anyhow.workspace = true
+thiserror.workspace = true
+serde.workspace = true
+tracing.workspace = true
+

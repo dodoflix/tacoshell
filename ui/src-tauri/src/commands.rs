@@ -1,0 +1,386 @@
+//! Tauri commands for IPC with the frontend
+
+use crate::state::{ActiveSession, AppState};
+use serde::{Deserialize, Serialize};
+use tacoshell_core::{AuthMethod, Protocol, Secret, SecretKind, Server, ServerSecret};
+use tacoshell_ssh::{PtyConfig, SshChannel, SshSession};
+use tauri::State;
+use uuid::Uuid;
+
+/// Error response for commands
+#[derive(Debug, Serialize)]
+pub struct CommandError {
+    pub message: String,
+}
+
+impl From<tacoshell_core::Error> for CommandError {
+    fn from(err: tacoshell_core::Error) -> Self {
+        Self {
+            message: err.to_string(),
+        }
+    }
+}
+
+type CommandResult<T> = Result<T, CommandError>;
+
+// ============================================================================
+// Server Commands
+// ============================================================================
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct ServerResponse {
+    pub id: String,
+    pub name: String,
+    pub host: String,
+    pub port: u16,
+    pub username: String,
+    pub protocol: String,
+    pub tags: Vec<String>,
+}
+
+impl From<Server> for ServerResponse {
+    fn from(s: Server) -> Self {
+        Self {
+            id: s.id.to_string(),
+            name: s.name,
+            host: s.host,
+            port: s.port,
+            username: s.username,
+            protocol: format!("{:?}", s.protocol).to_lowercase(),
+            tags: s.tags,
+        }
+    }
+}
+
+#[tauri::command]
+pub fn get_servers(state: State<AppState>) -> CommandResult<Vec<ServerResponse>> {
+    let servers = state.db.servers().list().map_err(CommandError::from)?;
+    Ok(servers.into_iter().map(ServerResponse::from).collect())
+}
+
+#[derive(Debug, Deserialize)]
+pub struct AddServerRequest {
+    pub name: String,
+    pub host: String,
+    pub port: u16,
+    pub username: String,
+    pub protocol: Option<String>,
+    pub tags: Option<Vec<String>>,
+}
+
+#[tauri::command]
+pub fn add_server(state: State<AppState>, request: AddServerRequest) -> CommandResult<ServerResponse> {
+    let mut server = Server::new(request.name, request.host, request.port, request.username);
+
+    if let Some(protocol) = request.protocol {
+        server.protocol = match protocol.to_lowercase().as_str() {
+            "sftp" => Protocol::Sftp,
+            "ftp" => Protocol::Ftp,
+            _ => Protocol::Ssh,
+        };
+    }
+
+    if let Some(tags) = request.tags {
+        server.tags = tags;
+    }
+
+    state.db.servers().store(&server).map_err(CommandError::from)?;
+    Ok(ServerResponse::from(server))
+}
+
+#[tauri::command]
+pub fn update_server(state: State<AppState>, request: ServerResponse) -> CommandResult<()> {
+    let id = Uuid::parse_str(&request.id)
+        .map_err(|e| CommandError { message: format!("Invalid UUID: {}", e) })?;
+
+    let mut server = state.db.servers().get(id)
+        .map_err(CommandError::from)?
+        .ok_or_else(|| CommandError { message: "Server not found".to_string() })?;
+
+    server.name = request.name;
+    server.host = request.host;
+    server.port = request.port;
+    server.username = request.username;
+    server.tags = request.tags;
+
+    state.db.servers().update(&server).map_err(CommandError::from)?;
+    Ok(())
+}
+
+#[tauri::command]
+pub fn delete_server(state: State<AppState>, id: String) -> CommandResult<()> {
+    let uuid = Uuid::parse_str(&id)
+        .map_err(|e| CommandError { message: format!("Invalid UUID: {}", e) })?;
+    state.db.servers().delete(uuid).map_err(CommandError::from)?;
+    Ok(())
+}
+
+// ============================================================================
+// Secret Commands
+// ============================================================================
+
+#[derive(Debug, Serialize)]
+pub struct SecretResponse {
+    pub id: String,
+    pub name: String,
+    pub kind: String,
+}
+
+impl From<Secret> for SecretResponse {
+    fn from(s: Secret) -> Self {
+        Self {
+            id: s.id.to_string(),
+            name: s.name,
+            kind: format!("{:?}", s.kind).to_lowercase(),
+        }
+    }
+}
+
+#[tauri::command]
+pub fn get_secrets(state: State<AppState>) -> CommandResult<Vec<SecretResponse>> {
+    let secrets = state.db.secrets().list().map_err(CommandError::from)?;
+    Ok(secrets.into_iter().map(SecretResponse::from).collect())
+}
+
+#[derive(Debug, Deserialize)]
+pub struct AddSecretRequest {
+    pub name: String,
+    pub kind: String,
+    pub value: String,
+}
+
+#[tauri::command]
+pub fn add_secret(state: State<AppState>, request: AddSecretRequest) -> CommandResult<SecretResponse> {
+    let kind = match request.kind.to_lowercase().as_str() {
+        "private_key" | "privatekey" => SecretKind::PrivateKey,
+        "token" => SecretKind::Token,
+        "kubeconfig" => SecretKind::Kubeconfig,
+        _ => SecretKind::Password,
+    };
+
+    let encrypted_value = state.encryption.encrypt_string(&request.value)
+        .map_err(CommandError::from)?;
+
+    let secret = Secret::new(request.name, kind, encrypted_value);
+    state.db.secrets().store(&secret).map_err(CommandError::from)?;
+
+    Ok(SecretResponse::from(secret))
+}
+
+#[tauri::command]
+pub fn delete_secret(state: State<AppState>, id: String) -> CommandResult<()> {
+    let uuid = Uuid::parse_str(&id)
+        .map_err(|e| CommandError { message: format!("Invalid UUID: {}", e) })?;
+    state.db.secrets().delete(uuid).map_err(CommandError::from)?;
+    Ok(())
+}
+
+#[tauri::command]
+pub fn link_secret_to_server(
+    state: State<AppState>,
+    server_id: String,
+    secret_id: String,
+    priority: Option<i32>,
+) -> CommandResult<()> {
+    let server_uuid = Uuid::parse_str(&server_id)
+        .map_err(|e| CommandError { message: format!("Invalid server UUID: {}", e) })?;
+    let secret_uuid = Uuid::parse_str(&secret_id)
+        .map_err(|e| CommandError { message: format!("Invalid secret UUID: {}", e) })?;
+
+    let link = ServerSecret::new(server_uuid, secret_uuid, priority.unwrap_or(0));
+    state.db.servers().link_secret(&link).map_err(CommandError::from)?;
+    Ok(())
+}
+
+#[tauri::command]
+pub fn unlink_secret_from_server(
+    state: State<AppState>,
+    server_id: String,
+    secret_id: String,
+) -> CommandResult<()> {
+    let server_uuid = Uuid::parse_str(&server_id)
+        .map_err(|e| CommandError { message: format!("Invalid server UUID: {}", e) })?;
+    let secret_uuid = Uuid::parse_str(&secret_id)
+        .map_err(|e| CommandError { message: format!("Invalid secret UUID: {}", e) })?;
+
+    state.db.servers().unlink_secret(server_uuid, secret_uuid).map_err(CommandError::from)?;
+    Ok(())
+}
+
+// ============================================================================
+// SSH Session Commands
+// ============================================================================
+
+#[derive(Debug, Serialize)]
+pub struct SessionResponse {
+    pub session_id: String,
+    pub server_id: String,
+    pub connected: bool,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct ConnectRequest {
+    pub server_id: String,
+    /// Optional direct password (if not using stored secret)
+    pub password: Option<String>,
+    /// Optional direct private key (if not using stored secret)
+    pub private_key: Option<String>,
+    /// Passphrase for private key
+    pub passphrase: Option<String>,
+}
+
+#[tauri::command]
+pub fn connect_ssh(state: State<AppState>, request: ConnectRequest) -> CommandResult<SessionResponse> {
+    let server_uuid = Uuid::parse_str(&request.server_id)
+        .map_err(|e| CommandError { message: format!("Invalid server UUID: {}", e) })?;
+
+    let server = state.db.servers().get(server_uuid)
+        .map_err(CommandError::from)?
+        .ok_or_else(|| CommandError { message: "Server not found".to_string() })?;
+
+    // Determine authentication method
+    let auth = if let Some(password) = request.password {
+        AuthMethod::Password(password)
+    } else if let Some(key) = request.private_key {
+        AuthMethod::PrivateKey {
+            key,
+            passphrase: request.passphrase,
+        }
+    } else {
+        // Try to get secrets linked to this server
+        let secrets = state.db.servers().get_secrets(server_uuid)
+            .map_err(CommandError::from)?;
+
+        if let Some(secret) = secrets.first() {
+            let decrypted = state.encryption.decrypt(&secret.encrypted_value)
+                .map_err(CommandError::from)?;
+            let value = String::from_utf8(decrypted)
+                .map_err(|e| CommandError { message: format!("Invalid secret encoding: {}", e) })?;
+
+            match secret.kind {
+                SecretKind::Password => AuthMethod::Password(value),
+                SecretKind::PrivateKey => AuthMethod::PrivateKey {
+                    key: value,
+                    passphrase: None,
+                },
+                _ => return Err(CommandError { message: "Unsupported secret type for SSH".to_string() }),
+            }
+        } else {
+            // Try SSH agent as fallback
+            AuthMethod::Agent
+        }
+    };
+
+    // Connect
+    let ssh_session = SshSession::connect(&server, auth)
+        .map_err(CommandError::from)?;
+
+    // Open channel with PTY
+    let channel = ssh_session.open_channel()
+        .map_err(CommandError::from)?;
+
+    let mut ssh_channel = SshChannel::new(channel);
+    ssh_channel.request_pty(&PtyConfig::default())
+        .map_err(CommandError::from)?;
+    ssh_channel.shell()
+        .map_err(CommandError::from)?;
+
+    let session_id = Uuid::new_v4();
+
+    state.add_session(session_id, ActiveSession {
+        session: ssh_session,
+        channel: Some(ssh_channel),
+    });
+
+    Ok(SessionResponse {
+        session_id: session_id.to_string(),
+        server_id: request.server_id,
+        connected: true,
+    })
+}
+
+#[tauri::command]
+pub fn disconnect_ssh(state: State<AppState>, session_id: String) -> CommandResult<()> {
+    let uuid = Uuid::parse_str(&session_id)
+        .map_err(|e| CommandError { message: format!("Invalid session UUID: {}", e) })?;
+
+    if let Some(mut session) = state.remove_session(&uuid) {
+        if let Some(mut channel) = session.channel.take() {
+            let _ = channel.close();
+        }
+    }
+
+    Ok(())
+}
+
+#[derive(Debug, Serialize)]
+pub struct SshOutputResponse {
+    pub data: String,
+    pub eof: bool,
+}
+
+#[tauri::command]
+pub fn send_ssh_input(
+    state: State<AppState>,
+    session_id: String,
+    input: String,
+) -> CommandResult<SshOutputResponse> {
+    let uuid = Uuid::parse_str(&session_id)
+        .map_err(|e| CommandError { message: format!("Invalid session UUID: {}", e) })?;
+
+    let result = state.with_session(&uuid, |session| {
+        if let Some(channel) = &mut session.channel {
+            // Send input
+            if !input.is_empty() {
+                channel.write(input.as_bytes())?;
+            }
+
+            // Read available output
+            let mut buf = vec![0u8; 4096];
+            let mut output = Vec::new();
+
+            loop {
+                match channel.read(&mut buf) {
+                    Ok(0) => break,
+                    Ok(n) => output.extend_from_slice(&buf[..n]),
+                    Err(_) => break,
+                }
+            }
+
+            Ok(SshOutputResponse {
+                data: String::from_utf8_lossy(&output).to_string(),
+                eof: channel.eof(),
+            })
+        } else {
+            Err(tacoshell_core::Error::Session("No active channel".to_string()))
+        }
+    });
+
+    result
+        .ok_or_else(|| CommandError { message: "Session not found".to_string() })?
+        .map_err(CommandError::from)
+}
+
+#[tauri::command]
+pub fn resize_terminal(
+    state: State<AppState>,
+    session_id: String,
+    cols: u32,
+    rows: u32,
+) -> CommandResult<()> {
+    let uuid = Uuid::parse_str(&session_id)
+        .map_err(|e| CommandError { message: format!("Invalid session UUID: {}", e) })?;
+
+    let result = state.with_session(&uuid, |session| {
+        if let Some(channel) = &mut session.channel {
+            channel.resize(cols, rows)
+        } else {
+            Err(tacoshell_core::Error::Session("No active channel".to_string()))
+        }
+    });
+
+    result
+        .ok_or_else(|| CommandError { message: "Session not found".to_string() })?
+        .map_err(CommandError::from)
+}
+

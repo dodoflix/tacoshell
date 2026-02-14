@@ -1,0 +1,20 @@
+[package]
+name = "tacoshell-k8s"
+description = "Kubernetes cluster management for Tacoshell"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+tacoshell-core.workspace = true
+tokio.workspace = true
+anyhow.workspace = true
+thiserror.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+tracing.workspace = true
+
+# Kubernetes dependencies (will be used in Phase 4)
+# kube = { version = "0.98", features = ["runtime", "derive"] }
+# k8s-openapi = { version = "0.24", features = ["v1_32"] }
+

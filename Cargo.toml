@@ -1,12 +1,59 @@
-[package]
-name = "tacoshell"
+[workspace]
+resolver = "2"
+members = [
+    "crates/tacoshell-core",
+    "crates/tacoshell-secrets",
+    "crates/tacoshell-ssh",
+    "crates/tacoshell-transfer",
+    "crates/tacoshell-k8s",
+    "crates/tacoshell-db",
+    "ui/src-tauri",
+]
+
+[workspace.package]
 version = "0.1.0"
 edition = "2021"
+authors = ["Tacoshell Contributors"]
+license = "MIT"
+repository = "https://github.com/tacoshell/tacoshell"
 
-[dependencies]
-clap = { version = "4.5", features = ["derive"] }
-ssh2 = "0.9"
-crossterm = "0.28"
+[workspace.dependencies]
+# Internal crates
+tacoshell-core = { path = "crates/tacoshell-core" }
+tacoshell-secrets = { path = "crates/tacoshell-secrets" }
+tacoshell-ssh = { path = "crates/tacoshell-ssh" }
+tacoshell-transfer = { path = "crates/tacoshell-transfer" }
+tacoshell-k8s = { path = "crates/tacoshell-k8s" }
+tacoshell-db = { path = "crates/tacoshell-db" }
+
+# Async runtime
+tokio = { version = "1.43", features = ["full"] }
+
+# Error handling
 anyhow = "1.0"
 thiserror = "2.0"
+
+# Serialization
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+# Database
+rusqlite = { version = "0.32", features = ["bundled"] }
+
+# SSH
+ssh2 = "0.9"
+
+# Encryption
+age = "0.10"
+rand = "0.8"
+
+# UUID
+uuid = { version = "1.11", features = ["v4", "serde"] }
+
+# Date/Time
+chrono = { version = "0.4", features = ["serde"] }
+
+# Logging
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 

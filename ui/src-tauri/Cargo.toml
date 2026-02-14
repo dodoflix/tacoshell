@@ -1,0 +1,34 @@
+[package]
+name = "tacoshell-app"
+version = "0.1.0"
+description = "Tacoshell - Unified Infrastructure Management GUI"
+authors = ["Tacoshell Contributors"]
+edition = "2021"
+
+[lib]
+name = "tacoshell_app_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
+tauri-plugin-opener = "2"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+tokio = { version = "1.43", features = ["full"] }
+uuid = { version = "1.11", features = ["v4", "serde"] }
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+anyhow = "1.0"
+
+# Internal crates
+tacoshell-core = { path = "../../crates/tacoshell-core" }
+tacoshell-db = { path = "../../crates/tacoshell-db" }
+tacoshell-secrets = { path = "../../crates/tacoshell-secrets" }
+tacoshell-ssh = { path = "../../crates/tacoshell-ssh" }
+
+# Platform utilities
+dirs = "6.0"
+
