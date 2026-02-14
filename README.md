@@ -1,6 +1,13 @@
 # tacoshell
 
 A Go project.
+Tacoshell is an open-source SSH Client.
+
+## About
+
+Tacoshell is designed to provide a seamless and efficient SSH experience for users. It offers a user-friendly interface,
+robust security features, and support for various platforms. Whether you're a developer, system administrator, or anyone
+who needs to manage remote servers, Tacoshell aims to be your go-to SSH client.
 
 ## Project Structure
 
