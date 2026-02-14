@@ -88,38 +88,52 @@ impl AppState {
 
     /// Generate a cryptographically secure random master key
     fn generate_master_key() -> String {
-        use std::collections::hash_map::RandomState;
-        use std::hash::{BuildHasher, Hasher};
+        use rand::RngCore;
 
-        // Generate random bytes using system entropy
+        // Generate 32 cryptographically secure random bytes using OS entropy
         let mut key_bytes = [0u8; 32];
-        for (i, byte) in key_bytes.iter_mut().enumerate() {
-            let hasher = RandomState::new().build_hasher();
-            let mut h = hasher;
-            h.write_usize(i);
-            h.write_u64(std::time::SystemTime::now()
-                .duration_since(std::time::UNIX_EPOCH)
-                .unwrap_or_default()
-                .as_nanos() as u64);
-            *byte = (h.finish() & 0xFF) as u8;
-        }
+        rand::rngs::OsRng.fill_bytes(&mut key_bytes);
 
-        // Encode as base64-like string
+        // Encode as hex string (64 characters)
         base16ct::lower::encode_string(&key_bytes)
     }
 
     /// Derive a fallback key when keyring is unavailable
+    ///
+    /// WARNING: This fallback is less secure than the OS keyring.
+    /// The key is derived from machine-specific data but should be considered
+    /// a temporary measure. Users should resolve keyring access issues.
     fn derive_fallback_key() -> String {
-        // Use machine-specific data to derive a key
-        let hostname = hostname::get()
-            .map(|h| h.to_string_lossy().to_string())
-            .unwrap_or_else(|_| "unknown".to_string());
+        use rand::RngCore;
+        use std::io::Write;
 
+        // Try to use a file-based key as fallback
         let data_dir = dirs::data_dir()
-            .map(|d| d.to_string_lossy().to_string())
-            .unwrap_or_else(|| ".".to_string());
+            .unwrap_or_else(|| std::path::PathBuf::from("."))
+            .join("tacoshell");
+        let key_file = data_dir.join(".master_key");
 
-        format!("tacoshell-fallback-{}-{}", hostname, data_dir.len())
+        // Try to read existing fallback key
+        if let Ok(existing_key) = std::fs::read_to_string(&key_file) {
+            let key = existing_key.trim().to_string();
+            if key.len() == 64 {
+                tracing::warn!("Using file-based fallback key - OS keyring unavailable");
+                return key;
+            }
+        }
+
+        // Generate new fallback key
+        let mut key_bytes = [0u8; 32];
+        rand::rngs::OsRng.fill_bytes(&mut key_bytes);
+        let key = base16ct::lower::encode_string(&key_bytes);
+
+        // Try to save it (ignore errors - we'll regenerate next time)
+        if let Ok(mut file) = std::fs::File::create(&key_file) {
+            let _ = file.write_all(key.as_bytes());
+            tracing::warn!("Created file-based fallback key at {:?} - OS keyring unavailable", key_file);
+        }
+
+        key
     }
 
     /// Add an active session

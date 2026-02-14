@@ -96,8 +96,19 @@ impl SecretRepository {
         let created_str: String = row.get(4)?;
         let updated_str: String = row.get(5)?;
 
+        let id = Uuid::parse_str(&id_str)
+            .map_err(|e| rusqlite::Error::FromSqlConversionFailure(0, rusqlite::types::Type::Text, Box::new(e)))?;
+
+        let created_at = chrono::DateTime::parse_from_rfc3339(&created_str)
+            .map_err(|e| rusqlite::Error::FromSqlConversionFailure(4, rusqlite::types::Type::Text, Box::new(e)))?
+            .with_timezone(&chrono::Utc);
+
+        let updated_at = chrono::DateTime::parse_from_rfc3339(&updated_str)
+            .map_err(|e| rusqlite::Error::FromSqlConversionFailure(5, rusqlite::types::Type::Text, Box::new(e)))?
+            .with_timezone(&chrono::Utc);
+
         Ok(Secret {
-            id: Uuid::parse_str(&id_str).unwrap(),
+            id,
             name: row.get(1)?,
             kind: match kind_str.as_str() {
                 "password" => SecretKind::Password,
@@ -107,12 +118,8 @@ impl SecretRepository {
                 _ => SecretKind::Password,
             },
             encrypted_value: row.get(3)?,
-            created_at: chrono::DateTime::parse_from_rfc3339(&created_str)
-                .unwrap()
-                .with_timezone(&chrono::Utc),
-            updated_at: chrono::DateTime::parse_from_rfc3339(&updated_str)
-                .unwrap()
-                .with_timezone(&chrono::Utc),
+            created_at,
+            updated_at,
         })
     }
 }
@@ -263,8 +270,19 @@ impl ServerRepository {
         let created_str: String = row.get(7)?;
         let updated_str: String = row.get(8)?;
 
+        let id = Uuid::parse_str(&id_str)
+            .map_err(|e| rusqlite::Error::FromSqlConversionFailure(0, rusqlite::types::Type::Text, Box::new(e)))?;
+
+        let created_at = chrono::DateTime::parse_from_rfc3339(&created_str)
+            .map_err(|e| rusqlite::Error::FromSqlConversionFailure(7, rusqlite::types::Type::Text, Box::new(e)))?
+            .with_timezone(&chrono::Utc);
+
+        let updated_at = chrono::DateTime::parse_from_rfc3339(&updated_str)
+            .map_err(|e| rusqlite::Error::FromSqlConversionFailure(8, rusqlite::types::Type::Text, Box::new(e)))?
+            .with_timezone(&chrono::Utc);
+
         Ok(Server {
-            id: Uuid::parse_str(&id_str).unwrap(),
+            id,
             name: row.get(1)?,
             host: row.get(2)?,
             port: row.get(3)?,
@@ -276,12 +294,8 @@ impl ServerRepository {
                 _ => Protocol::Ssh,
             },
             tags: serde_json::from_str(&tags_str).unwrap_or_default(),
-            created_at: chrono::DateTime::parse_from_rfc3339(&created_str)
-                .unwrap()
-                .with_timezone(&chrono::Utc),
-            updated_at: chrono::DateTime::parse_from_rfc3339(&updated_str)
-                .unwrap()
-                .with_timezone(&chrono::Utc),
+            created_at,
+            updated_at,
         })
     }
 }

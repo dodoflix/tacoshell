@@ -74,7 +74,29 @@ pub struct AddServerRequest {
 
 #[tauri::command]
 pub fn add_server(state: State<AppState>, request: AddServerRequest) -> CommandResult<ServerResponse> {
-    let mut server = Server::new(request.name, request.host, request.port, request.username);
+    // Input validation
+    if request.name.trim().is_empty() {
+        return Err(CommandError { message: "Server name cannot be empty".to_string() });
+    }
+    if request.name.len() > 255 {
+        return Err(CommandError { message: "Server name too long (max 255 characters)".to_string() });
+    }
+    if request.host.trim().is_empty() {
+        return Err(CommandError { message: "Host cannot be empty".to_string() });
+    }
+    if request.port == 0 {
+        return Err(CommandError { message: "Port must be between 1 and 65535".to_string() });
+    }
+    if request.username.trim().is_empty() {
+        return Err(CommandError { message: "Username cannot be empty".to_string() });
+    }
+
+    let mut server = Server::new(
+        request.name.trim().to_string(),
+        request.host.trim().to_string(),
+        request.port,
+        request.username.trim().to_string(),
+    );
 
     if let Some(protocol) = request.protocol {
         server.protocol = match protocol.to_lowercase().as_str() {
@@ -179,7 +201,7 @@ pub fn delete_secret(state: State<AppState>, id: String) -> CommandResult<()> {
     Ok(())
 }
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub fn link_secret_to_server(
     state: State<AppState>,
     server_id: String,
@@ -196,7 +218,7 @@ pub fn link_secret_to_server(
     Ok(())
 }
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub fn unlink_secret_from_server(
     state: State<AppState>,
     server_id: String,
@@ -301,6 +323,10 @@ pub fn connect_ssh(
     ssh_channel.shell()
         .map_err(CommandError::from)?;
 
+    // Keep in blocking mode but set a short timeout for reads
+    // This allows us to periodically check the stop flag
+    ssh_session.set_timeout(100); // 100ms timeout
+
     let session_id = Uuid::new_v4();
     let session_id_str = session_id.to_string();
     let stop_flag = Arc::new(AtomicBool::new(false));
@@ -318,7 +344,7 @@ pub fn connect_ssh(
     let sessions = state.sessions.clone();
 
     thread::spawn(move || {
-        let mut buf = vec![0u8; 4096];
+        let mut buf = vec![0u8; 8192];
 
         loop {
             // Check if we should stop
@@ -326,15 +352,16 @@ pub fn connect_ssh(
                 break;
             }
 
-            // Try to read from the channel
+            // Try to read from the channel - hold lock briefly
             let read_result = {
                 let mut sessions_guard = sessions.lock().unwrap();
                 if let Some(session) = sessions_guard.get_mut(&session_id) {
                     if let Some(channel) = &mut session.channel {
+                        // Blocking read with timeout
                         match channel.read(&mut buf) {
-                            Ok(0) => None, // No data available
-                            Ok(n) => Some((buf[..n].to_vec(), channel.eof())),
-                            Err(_) => None,
+                            Ok(n) if n > 0 => Some((buf[..n].to_vec(), channel.eof())),
+                            Ok(_) => None, // Timeout or no data
+                            Err(_) => None, // Timeout or error
                         }
                     } else {
                         None
@@ -344,6 +371,7 @@ pub fn connect_ssh(
                     break;
                 }
             };
+            // Lock is released here
 
             if let Some((data, eof)) = read_result {
                 let output = String::from_utf8_lossy(&data).to_string();
@@ -360,7 +388,7 @@ pub fn connect_ssh(
                 }
             }
 
-            // Small sleep to prevent busy-waiting
+            // Small sleep to prevent busy-waiting on timeout
             thread::sleep(Duration::from_millis(10));
         }
     });
@@ -372,7 +400,7 @@ pub fn connect_ssh(
     })
 }
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub fn disconnect_ssh(state: State<AppState>, session_id: String) -> CommandResult<()> {
     let uuid = Uuid::parse_str(&session_id)
         .map_err(|e| CommandError { message: format!("Invalid session UUID: {}", e) })?;
@@ -390,33 +418,49 @@ pub fn disconnect_ssh(state: State<AppState>, session_id: String) -> CommandResu
 }
 
 /// Send input to an SSH session (output is received via ssh-output events)
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub fn send_ssh_input(
     state: State<AppState>,
     session_id: String,
     input: String,
 ) -> CommandResult<()> {
+    if input.is_empty() {
+        return Ok(());
+    }
+
+    tracing::debug!("send_ssh_input called: session={}, input_len={}", session_id, input.len());
+
     let uuid = Uuid::parse_str(&session_id)
         .map_err(|e| CommandError { message: format!("Invalid session UUID: {}", e) })?;
 
-    let result = state.with_session(&uuid, |session| {
-        if let Some(channel) = &mut session.channel {
-            // Send input only if not empty
-            if !input.is_empty() {
-                channel.write(input.as_bytes())?;
-            }
+    let result = state.with_session(&uuid, |active_session| {
+        if let Some(channel) = &mut active_session.channel {
+            tracing::debug!("Writing {} bytes to channel", input.len());
+
+            // Use write_all for reliable writes (session is in blocking mode with timeout)
+            channel.write_all(input.as_bytes())?;
+            let _ = channel.flush();
+
+            tracing::debug!("Write completed successfully");
             Ok(())
         } else {
+            tracing::error!("No active channel for session {}", session_id);
             Err(tacoshell_core::Error::Session("No active channel".to_string()))
         }
     });
+
+    match &result {
+        Some(Ok(_)) => tracing::debug!("Input sent successfully"),
+        Some(Err(e)) => tracing::error!("Error sending input: {}", e),
+        None => tracing::error!("Session not found: {}", session_id),
+    }
 
     result
         .ok_or_else(|| CommandError { message: "Session not found".to_string() })?
         .map_err(CommandError::from)
 }
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub fn resize_terminal(
     state: State<AppState>,
     session_id: String,
@@ -438,4 +482,7 @@ pub fn resize_terminal(
         .ok_or_else(|| CommandError { message: "Session not found".to_string() })?
         .map_err(CommandError::from)
 }
+
+
+
 

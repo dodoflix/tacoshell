@@ -68,6 +68,9 @@ export function TerminalView({ sessionId, onDisconnect }: TerminalViewProps) {
     // Initial resize
     setTimeout(handleResize, 100);
 
+    // Focus the terminal
+    setTimeout(() => terminal.focus(), 150);
+
     // Listen for SSH output events from the backend
     const setupListener = async () => {
       unlistenRef.current = await listen<SshOutputEvent>('ssh-output', (event) => {
@@ -117,6 +120,7 @@ export function TerminalView({ sessionId, onDisconnect }: TerminalViewProps) {
   return (
     <div
       ref={terminalRef}
+      onClick={() => xtermRef.current?.focus()}
       style={{
         width: '100%',
         height: '100%',

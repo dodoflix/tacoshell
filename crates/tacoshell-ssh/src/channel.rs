@@ -76,6 +76,22 @@ impl SshChannel {
             .map_err(|e| Error::Session(format!("Failed to write to channel: {}", e)))
     }
 
+    /// Write all data to the channel, retrying on WouldBlock
+    pub fn write_all(&mut self, data: &[u8]) -> Result<()> {
+        use std::io::Write;
+        self.channel
+            .write_all(data)
+            .map_err(|e| Error::Session(format!("Failed to write to channel: {}", e)))
+    }
+
+    /// Flush the channel
+    pub fn flush(&mut self) -> Result<()> {
+        use std::io::Write;
+        self.channel
+            .flush()
+            .map_err(|e| Error::Session(format!("Failed to flush channel: {}", e)))
+    }
+
     /// Read data from the channel (non-blocking style)
     pub fn read(&mut self, buf: &mut [u8]) -> Result<usize> {
         self.channel

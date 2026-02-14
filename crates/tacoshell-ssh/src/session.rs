@@ -151,6 +151,16 @@ impl SshSession {
         &self.session
     }
 
+    /// Set the session blocking mode
+    pub fn set_blocking(&self, blocking: bool) {
+        self.session.set_blocking(blocking);
+    }
+
+    /// Set the session timeout in milliseconds (0 = no timeout)
+    pub fn set_timeout(&self, timeout_ms: u32) {
+        self.session.set_timeout(timeout_ms);
+    }
+
     /// Open a new channel for executing commands or starting a shell
     pub fn open_channel(&self) -> Result<ssh2::Channel> {
         self.session
