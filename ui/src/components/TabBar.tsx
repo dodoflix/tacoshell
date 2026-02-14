@@ -28,7 +28,7 @@ export function TabBar() {
   }
 
   return (
-    <header className="h-14 bg-white dark:bg-background-dark border-b border-gray-200 dark:border-border-dark flex items-center justify-between px-4 flex-shrink-0">
+    <header className="h-14 bg-background-dark border-b border-white/5 flex items-center justify-between px-4 flex-shrink-0">
       {/* Tabs */}
       <div className="flex items-center gap-1 overflow-x-auto no-scrollbar">
         {tabs.map((tab) => {
@@ -41,7 +41,7 @@ export function TabBar() {
               className={`group flex items-center gap-2 px-4 py-2 rounded-lg cursor-pointer min-w-[160px] transition-all relative ${
                 isActive
                   ? 'bg-primary/10 border border-primary/20 rounded-t-lg top-[1px] cursor-default'
-                  : 'hover:bg-gray-100 dark:hover:bg-panel-dark text-slate-500 dark:text-slate-400 border border-transparent hover:border-border-dark'
+                  : 'hover:bg-white/5 text-slate-400 border border-transparent hover:border-white/10'
               }`}
             >
               <div className={`w-2 h-2 rounded-full ${
@@ -55,7 +55,7 @@ export function TabBar() {
                 className={`ml-auto p-0.5 rounded-full transition-opacity ${
                   isActive
                     ? 'text-primary/50 hover:text-primary hover:bg-primary/10'
-                    : 'opacity-0 group-hover:opacity-100 text-slate-400 hover:text-white hover:bg-slate-700'
+                    : 'opacity-0 group-hover:opacity-100 text-slate-400 hover:text-white hover:bg-white/10'
                 }`}
                 onClick={(e) => {
                   e.stopPropagation();
@@ -70,23 +70,18 @@ export function TabBar() {
             </div>
           );
         })}
-
-        {/* Add New Tab Button (Placeholder for now) */}
-        <button className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100 dark:hover:bg-panel-dark text-slate-400 hover:text-primary transition-colors ml-1">
-          <span className="material-icons-round text-lg">add</span>
-        </button>
       </div>
 
       {/* Global Actions */}
       <div className="flex items-center gap-2">
-        <div className="h-6 w-px bg-gray-200 dark:bg-border-dark mx-2"></div>
-        <button className="p-2 text-slate-400 hover:text-white rounded-lg hover:bg-panel-dark" title="Split Screen">
+        <div className="h-6 w-px bg-white/10 mx-2"></div>
+        <button className="p-2 text-slate-400 hover:text-white rounded-lg hover:bg-white/5" title="Split Screen">
           <span className="material-icons-round text-[20px]">splitscreen</span>
         </button>
-        <button className="p-2 text-slate-400 hover:text-white rounded-lg hover:bg-panel-dark" title="Search Logs">
+        <button className="p-2 text-slate-400 hover:text-white rounded-lg hover:bg-white/5" title="Search Logs">
           <span className="material-icons-round text-[20px]">search</span>
         </button>
-        <button className="p-2 text-slate-400 hover:text-white rounded-lg hover:bg-panel-dark" title="Toggle Right Panel">
+        <button className="p-2 text-slate-400 hover:text-white rounded-lg hover:bg-white/5" title="Toggle Right Panel">
           <span className="material-icons-round text-[20px]">vertical_split</span>
         </button>
       </div>

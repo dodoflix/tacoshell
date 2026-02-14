@@ -47,6 +47,9 @@ export function TerminalView({ sessionId, onDisconnect }: TerminalViewProps) {
       allowProposedApi: true,
     });
 
+    terminal.options.fontSize = fontSize;
+    terminal.options.fontFamily = fontFamily;
+
     const fitAddon = new FitAddon();
     terminal.loadAddon(fitAddon);
     terminal.open(terminalRef.current);
@@ -126,12 +129,21 @@ export function TerminalView({ sessionId, onDisconnect }: TerminalViewProps) {
     return () => resizeObserver.disconnect();
   }, [sessionId]);
 
+  // Update terminal options when settings change
+  useEffect(() => {
+    if (xtermRef.current) {
+      xtermRef.current.options.fontSize = fontSize;
+      xtermRef.current.options.fontFamily = fontFamily;
+      fitAddonRef.current?.fit();
+    }
+  }, [fontSize, fontFamily]);
+
   return (
-    <div className="flex h-full w-full overflow-hidden">
+    <div className="flex h-full w-full overflow-hidden bg-background-dark">
       {/* Terminal Viewport */}
-      <div className="flex-1 flex flex-col p-2 bg-gray-100 dark:bg-background-dark overflow-hidden relative">
+      <div className="flex-1 flex flex-col p-2 bg-background-dark overflow-hidden relative">
         <div
-          className="w-full h-full bg-black dark:bg-terminal-bg rounded-lg border border-gray-300 dark:border-border-dark shadow-inner p-4 font-mono overflow-hidden"
+          className="w-full h-full bg-terminal-bg rounded-lg border border-white/5 shadow-inner p-4 font-mono overflow-hidden"
           onClick={() => xtermRef.current?.focus()}
         >
           <div ref={terminalRef} className="w-full h-full" />
@@ -143,34 +155,34 @@ export function TerminalView({ sessionId, onDisconnect }: TerminalViewProps) {
             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
             <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
           </span>
-          Connected (24ms)
+          Connected
         </div>
       </div>
 
       {/* Right Utility Panel */}
-      <aside className="w-80 bg-white dark:bg-panel-dark border-l border-gray-200 dark:border-border-dark flex flex-col flex-shrink-0 h-full overflow-y-auto">
+      <aside className="w-80 bg-panel-dark border-l border-white/5 flex flex-col flex-shrink-0 h-full overflow-y-auto">
         {/* Panel Header */}
-        <div className="p-4 border-b border-gray-200 dark:border-border-dark">
-          <h2 className="text-sm font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">Host Information</h2>
+        <div className="p-4 border-b border-white/5">
+          <h2 className="text-sm font-semibold uppercase tracking-wider text-slate-500 mb-1">Host Information</h2>
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded bg-indigo-500/20 flex items-center justify-center text-indigo-400">
               <span className="material-icons-round">cloud_circle</span>
             </div>
             <div>
-              <h3 className="font-bold text-slate-800 dark:text-white truncate w-48">{server?.name || 'Unknown Host'}</h3>
+              <h3 className="font-bold text-white truncate w-48">{server?.name || 'Unknown Host'}</h3>
               <p className="text-xs text-slate-500">Ubuntu 22.04 LTS</p>
             </div>
           </div>
         </div>
 
         {/* System Stats */}
-        <div className="p-4 border-b border-gray-200 dark:border-border-dark space-y-4">
+        <div className="p-4 border-b border-white/5 space-y-4">
           <div className="grid grid-cols-2 gap-4">
-            <div className="bg-background-dark/50 p-2 rounded border border-border-dark">
+            <div className="bg-background-dark/50 p-2 rounded border border-white/5">
               <span className="text-xs text-slate-500 block">IP Address</span>
               <span className="text-sm font-mono text-slate-300 truncate block">{server?.host || '0.0.0.0'}</span>
             </div>
-            <div className="bg-background-dark/50 p-2 rounded border border-border-dark">
+            <div className="bg-background-dark/50 p-2 rounded border border-white/5">
               <span className="text-xs text-slate-500 block">Uptime</span>
               <span className="text-sm font-mono text-slate-300">14d 2h 12m</span>
             </div>
@@ -181,7 +193,7 @@ export function TerminalView({ sessionId, onDisconnect }: TerminalViewProps) {
               <span className="text-slate-400">CPU Load</span>
               <span className="text-green-400">12%</span>
             </div>
-            <div className="w-full bg-gray-700 rounded-full h-1.5 overflow-hidden">
+            <div className="w-full bg-white/10 rounded-full h-1.5 overflow-hidden">
               <div className="bg-green-500 h-1.5 rounded-full" style={{ width: '12%' }}></div>
             </div>
           </div>
@@ -191,7 +203,7 @@ export function TerminalView({ sessionId, onDisconnect }: TerminalViewProps) {
               <span className="text-slate-400">Memory (RAM)</span>
               <span className="text-yellow-400">64%</span>
             </div>
-            <div className="w-full bg-gray-700 rounded-full h-1.5 overflow-hidden">
+            <div className="w-full bg-white/10 rounded-full h-1.5 overflow-hidden">
               <div className="bg-yellow-500 h-1.5 rounded-full" style={{ width: '64%' }}></div>
             </div>
           </div>
@@ -200,8 +212,8 @@ export function TerminalView({ sessionId, onDisconnect }: TerminalViewProps) {
         {/* Snippets */}
         <div className="p-4 flex-1">
           <div className="flex items-center justify-between mb-3">
-            <h2 className="text-sm font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Snippets</h2>
-            <button className="text-primary hover:text-primary-dark text-xs font-medium">View All</button>
+            <h2 className="text-sm font-semibold uppercase tracking-wider text-slate-500">Snippets</h2>
+            <button className="text-primary hover:text-primary-hover text-xs font-medium">View All</button>
           </div>
           <div className="space-y-2">
             {[
@@ -210,9 +222,9 @@ export function TerminalView({ sessionId, onDisconnect }: TerminalViewProps) {
               { name: 'Docker Stats', cmd: 'docker stats --format "table {{.Name}}\t{{.CPUPerc}}\t{{.MemUsage}}"' },
               { name: 'System Update', cmd: 'sudo apt update && sudo apt upgrade -y' },
             ].map((snippet) => (
-              <div key={snippet.name} className="group bg-background-light dark:bg-background-dark hover:border-primary/50 border border-transparent dark:border-border-dark rounded-lg p-3 transition-all cursor-pointer">
+              <div key={snippet.name} className="group bg-background-dark border border-white/5 hover:border-primary/50 rounded-lg p-3 transition-all cursor-pointer">
                 <div className="flex justify-between items-start mb-1">
-                  <span className="font-medium text-sm text-slate-700 dark:text-slate-200">{snippet.name}</span>
+                  <span className="font-medium text-sm text-slate-200">{snippet.name}</span>
                   <span className="material-icons-round text-slate-500 hover:text-primary text-[16px]">play_circle</span>
                 </div>
                 <code className="block text-xs font-mono text-slate-500 truncate">{snippet.cmd}</code>
@@ -222,9 +234,9 @@ export function TerminalView({ sessionId, onDisconnect }: TerminalViewProps) {
         </div>
 
         {/* Port Forwarding Section */}
-        <div className="p-4 border-t border-gray-200 dark:border-border-dark bg-background-light/50 dark:bg-black/20">
-          <h2 className="text-sm font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-3">Active Tunnels</h2>
-          <div className="flex items-center justify-between text-sm bg-background-dark/50 border border-border-dark rounded px-3 py-2">
+        <div className="p-4 border-t border-white/5 bg-black/20">
+          <h2 className="text-sm font-semibold uppercase tracking-wider text-slate-500 mb-3">Active Tunnels</h2>
+          <div className="flex items-center justify-between text-sm bg-background-dark/50 border border-white/5 rounded px-3 py-2">
             <div className="flex items-center gap-2">
               <span className="w-2 h-2 rounded-full bg-green-500"></span>
               <span className="text-slate-300 font-mono text-xs">L:8080 -{">"} R:80</span>
