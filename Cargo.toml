@@ -1,0 +1,12 @@
+[package]
+name = "tacoshell"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+clap = { version = "4.5", features = ["derive"] }
+ssh2 = "0.9"
+crossterm = "0.28"
+anyhow = "1.0"
+thiserror = "2.0"
+

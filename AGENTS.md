@@ -1,6 +1,6 @@
 # AGENTS Guidelines for This Repository
 
-This repository is an Open Source SSH Client project written in Go. When working on the project interactively with an
+This repository is an Open Source SSH Client project written in Rust. When working on the project interactively with an
 agent please follow the guidelines below so that the development experience is smooth and efficient for everyone
 involved.
 

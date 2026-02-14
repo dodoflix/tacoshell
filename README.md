@@ -14,24 +14,21 @@ See [ROADMAP.md](ROADMAP.md) for detailed phases and future plans.
 
 ## Documentation
 
-- [Architecture Decision Records (ADR)](docs/adr/0001-project-programming-language.md)
+- [Architecture Decision Records (ADR)](docs/adr/0001-use-rust.md)
 - [Design Documents](docs/README.md)
 
 ## Project Structure
 
-This project follows the [standard Go project layout](https://github.com/golang-standards/project-layout):
+This project follows the standard Rust project layout:
 
-- `cmd/`: Main applications for this project.
-- `internal/`: Private application and library code.
-- `pkg/`: Library code that's ok to use by external applications.
-- `api/`: OpenAPI/Swagger specs, JSON schema files, protocol definition files.
+- `src/`: Source code (`main.rs` entry point).
 - `configs/`: Configuration file templates or default configs.
-- `test/`: Additional external test apps and test data.
 - `docs/`: Design and user documents.
 - `build/`: Packaging and Continuous Integration.
 - `scripts/`: Scripts to perform various build, install, analysis, etc operations.
 
 ## Usage
 
-make run
+cargo run -- --help
+
 
