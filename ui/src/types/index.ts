@@ -52,8 +52,4 @@ export interface ConnectRequest {
   passphrase?: string;
 }
 
-export interface SshOutputResponse {
-  data: string;
-  eof: boolean;
-}
 

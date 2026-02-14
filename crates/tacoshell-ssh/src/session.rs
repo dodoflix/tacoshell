@@ -58,12 +58,29 @@ impl SshSession {
                         )
                         .map_err(|e| Error::Authentication(format!("Key auth failed: {}", e)))?;
                 } else {
-                    // Write key content to temp file for auth
+                    // Key content provided directly - use secure temp file with restricted permissions
+                    // Note: ssh2-rs doesn't have userauth_pubkey_memory, so we use a secure temp approach
                     let temp_dir = std::env::temp_dir();
-                    let temp_key_path = temp_dir.join(format!("tacoshell_key_{}", uuid::Uuid::new_v4()));
-                    std::fs::write(&temp_key_path, &key)
-                        .map_err(|e| Error::Authentication(format!("Failed to write temp key: {}", e)))?;
-                    
+                    let temp_key_path = temp_dir.join(format!(".tacoshell_key_{}", uuid::Uuid::new_v4()));
+
+                    // Write key with restricted permissions
+                    #[cfg(unix)]
+                    {
+                        use std::os::unix::fs::OpenOptionsExt;
+                        std::fs::OpenOptions::new()
+                            .write(true)
+                            .create_new(true)
+                            .mode(0o600)
+                            .open(&temp_key_path)
+                            .and_then(|mut f| std::io::Write::write_all(&mut f, key.as_bytes()))
+                            .map_err(|e| Error::Authentication(format!("Failed to write temp key: {}", e)))?;
+                    }
+                    #[cfg(windows)]
+                    {
+                        std::fs::write(&temp_key_path, &key)
+                            .map_err(|e| Error::Authentication(format!("Failed to write temp key: {}", e)))?;
+                    }
+
                     let result = session
                         .userauth_pubkey_file(
                             &server.username,
@@ -71,10 +88,12 @@ impl SshSession {
                             &temp_key_path,
                             passphrase.as_deref(),
                         );
-                    
-                    // Clean up temp file
+
+                    // Securely clean up temp file - overwrite before delete
+                    let key_len = key.len();
+                    let _ = std::fs::write(&temp_key_path, vec![0u8; key_len]);
                     let _ = std::fs::remove_file(&temp_key_path);
-                    
+
                     result.map_err(|e| Error::Authentication(format!("Key auth failed: {}", e)))?;
                 }
             }

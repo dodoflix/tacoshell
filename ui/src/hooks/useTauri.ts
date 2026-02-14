@@ -6,8 +6,7 @@ import type {
   Secret,
   AddServerRequest,
   AddSecretRequest,
-  ConnectRequest,
-  SshOutputResponse
+  ConnectRequest
 } from '../types';
 
 // Server hooks
@@ -80,8 +79,8 @@ export async function disconnectSsh(sessionId: string): Promise<void> {
 export async function sendSshInput(
   sessionId: string,
   input: string
-): Promise<SshOutputResponse> {
-  return invoke<SshOutputResponse>('send_ssh_input', {
+): Promise<void> {
+  return invoke('send_ssh_input', {
     session_id: sessionId,
     input
   });

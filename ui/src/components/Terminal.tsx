@@ -1,10 +1,17 @@
-// Terminal component using xterm.js
+// Terminal component using xterm.js with event-based output
 
-import { useEffect, useRef, useCallback } from 'react';
+import { useEffect, useRef } from 'react';
 import { Terminal } from '@xterm/xterm';
 import { FitAddon } from '@xterm/addon-fit';
 import '@xterm/xterm/css/xterm.css';
+import { listen, UnlistenFn } from '@tauri-apps/api/event';
 import { sendSshInput, resizeTerminal } from '../hooks/useTauri';
+
+interface SshOutputEvent {
+  session_id: string;
+  data: string;
+  eof: boolean;
+}
 
 interface TerminalViewProps {
   sessionId: string;
@@ -15,27 +22,7 @@ export function TerminalView({ sessionId, onDisconnect }: TerminalViewProps) {
   const terminalRef = useRef<HTMLDivElement>(null);
   const xtermRef = useRef<Terminal | null>(null);
   const fitAddonRef = useRef<FitAddon | null>(null);
-  const pollIntervalRef = useRef<number | null>(null);
-
-  const pollOutput = useCallback(async () => {
-    if (!xtermRef.current || !sessionId) return;
-
-    try {
-      const response = await sendSshInput(sessionId, '');
-      if (response.data) {
-        xtermRef.current.write(response.data);
-      }
-      if (response.eof) {
-        xtermRef.current.write('\r\n[Connection closed]\r\n');
-        if (pollIntervalRef.current) {
-          clearInterval(pollIntervalRef.current);
-        }
-        onDisconnect?.();
-      }
-    } catch (error) {
-      console.error('Error polling SSH output:', error);
-    }
-  }, [sessionId, onDisconnect]);
+  const unlistenRef = useRef<UnlistenFn | null>(null);
 
   useEffect(() => {
     if (!terminalRef.current) return;
@@ -61,13 +48,10 @@ export function TerminalView({ sessionId, onDisconnect }: TerminalViewProps) {
     xtermRef.current = terminal;
     fitAddonRef.current = fitAddon;
 
-    // Handle input
+    // Handle input - send to backend
     terminal.onData(async (data) => {
       try {
-        const response = await sendSshInput(sessionId, data);
-        if (response.data) {
-          terminal.write(response.data);
-        }
+        await sendSshInput(sessionId, data);
       } catch (error) {
         console.error('Error sending input:', error);
       }
@@ -84,17 +68,35 @@ export function TerminalView({ sessionId, onDisconnect }: TerminalViewProps) {
     // Initial resize
     setTimeout(handleResize, 100);
 
-    // Start polling for output
-    pollIntervalRef.current = window.setInterval(pollOutput, 50);
+    // Listen for SSH output events from the backend
+    const setupListener = async () => {
+      unlistenRef.current = await listen<SshOutputEvent>('ssh-output', (event) => {
+        // Only process events for this session
+        if (event.payload.session_id !== sessionId) return;
+
+        if (event.payload.data && xtermRef.current) {
+          xtermRef.current.write(event.payload.data);
+        }
+
+        if (event.payload.eof) {
+          if (xtermRef.current) {
+            xtermRef.current.write('\r\n[Connection closed]\r\n');
+          }
+          onDisconnect?.();
+        }
+      });
+    };
+
+    setupListener();
 
     return () => {
       window.removeEventListener('resize', handleResize);
-      if (pollIntervalRef.current) {
-        clearInterval(pollIntervalRef.current);
+      if (unlistenRef.current) {
+        unlistenRef.current();
       }
       terminal.dispose();
     };
-  }, [sessionId, pollOutput]);
+  }, [sessionId, onDisconnect]);
 
   // Handle container resize
   useEffect(() => {

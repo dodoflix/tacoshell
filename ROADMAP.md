@@ -9,6 +9,9 @@
 - [x] Scaffold Tauri app with terminal view (xterm.js)
 - [x] Define IPC contract (connect, disconnect, send_input)
 - [x] Secret management with encryption
+- [x] **Security: OS keyring integration for master key storage**
+- [x] **Security: Secure SSH key handling with proper cleanup**
+- [x] **Performance: Event-based terminal output (push model)**
 
 ## Phase 2: Tab & Split-Screen Window Manager 🚧
 **Status: In Progress**

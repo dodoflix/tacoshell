@@ -2,9 +2,13 @@
 
 use crate::state::{ActiveSession, AppState};
 use serde::{Deserialize, Serialize};
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::Arc;
+use std::thread;
+use std::time::Duration;
 use tacoshell_core::{AuthMethod, Protocol, Secret, SecretKind, Server, ServerSecret};
 use tacoshell_ssh::{PtyConfig, SshChannel, SshSession};
-use tauri::State;
+use tauri::{AppHandle, Emitter, State};
 use uuid::Uuid;
 
 /// Error response for commands
@@ -229,8 +233,20 @@ pub struct ConnectRequest {
     pub passphrase: Option<String>,
 }
 
+/// SSH output event payload
+#[derive(Clone, Serialize)]
+pub struct SshOutputEvent {
+    pub session_id: String,
+    pub data: String,
+    pub eof: bool,
+}
+
 #[tauri::command]
-pub fn connect_ssh(state: State<AppState>, request: ConnectRequest) -> CommandResult<SessionResponse> {
+pub fn connect_ssh(
+    app: AppHandle,
+    state: State<AppState>,
+    request: ConnectRequest,
+) -> CommandResult<SessionResponse> {
     let server_uuid = Uuid::parse_str(&request.server_id)
         .map_err(|e| CommandError { message: format!("Invalid server UUID: {}", e) })?;
 
@@ -286,14 +302,71 @@ pub fn connect_ssh(state: State<AppState>, request: ConnectRequest) -> CommandRe
         .map_err(CommandError::from)?;
 
     let session_id = Uuid::new_v4();
+    let session_id_str = session_id.to_string();
+    let stop_flag = Arc::new(AtomicBool::new(false));
 
+    // Store the session
     state.add_session(session_id, ActiveSession {
         session: ssh_session,
         channel: Some(ssh_channel),
+        stop_flag: stop_flag.clone(),
+    });
+
+    // Spawn background thread to read output and emit events
+    let app_handle = app.clone();
+    let session_id_for_thread = session_id_str.clone();
+    let sessions = state.sessions.clone();
+
+    thread::spawn(move || {
+        let mut buf = vec![0u8; 4096];
+
+        loop {
+            // Check if we should stop
+            if stop_flag.load(Ordering::Relaxed) {
+                break;
+            }
+
+            // Try to read from the channel
+            let read_result = {
+                let mut sessions_guard = sessions.lock().unwrap();
+                if let Some(session) = sessions_guard.get_mut(&session_id) {
+                    if let Some(channel) = &mut session.channel {
+                        match channel.read(&mut buf) {
+                            Ok(0) => None, // No data available
+                            Ok(n) => Some((buf[..n].to_vec(), channel.eof())),
+                            Err(_) => None,
+                        }
+                    } else {
+                        None
+                    }
+                } else {
+                    // Session was removed
+                    break;
+                }
+            };
+
+            if let Some((data, eof)) = read_result {
+                let output = String::from_utf8_lossy(&data).to_string();
+                if !output.is_empty() {
+                    let _ = app_handle.emit("ssh-output", SshOutputEvent {
+                        session_id: session_id_for_thread.clone(),
+                        data: output,
+                        eof,
+                    });
+                }
+
+                if eof {
+                    break;
+                }
+            }
+
+            // Small sleep to prevent busy-waiting
+            thread::sleep(Duration::from_millis(10));
+        }
     });
 
     Ok(SessionResponse {
-        session_id: session_id.to_string(),
+        session_id: session_id_str,
         server_id: request.server_id,
         connected: true,
     })
@@ -305,6 +378,9 @@ pub fn disconnect_ssh(state: State<AppState>, session_id: String) -> CommandResu
         .map_err(|e| CommandError { message: format!("Invalid session UUID: {}", e) })?;
 
     if let Some(mut session) = state.remove_session(&uuid) {
+        // Signal the background thread to stop
+        session.stop_flag.store(true, Ordering::Relaxed);
+
         if let Some(mut channel) = session.channel.take() {
             let _ = channel.close();
         }
@@ -313,44 +389,23 @@ pub fn disconnect_ssh(state: State<AppState>, session_id: String) -> CommandResu
     Ok(())
 }
 
-#[derive(Debug, Serialize)]
-pub struct SshOutputResponse {
-    pub data: String,
-    pub eof: bool,
-}
-
+/// Send input to an SSH session (output is received via ssh-output events)
 #[tauri::command]
 pub fn send_ssh_input(
     state: State<AppState>,
     session_id: String,
     input: String,
-) -> CommandResult<SshOutputResponse> {
+) -> CommandResult<()> {
     let uuid = Uuid::parse_str(&session_id)
         .map_err(|e| CommandError { message: format!("Invalid session UUID: {}", e) })?;
 
     let result = state.with_session(&uuid, |session| {
         if let Some(channel) = &mut session.channel {
-            // Send input
+            // Send input only if not empty
             if !input.is_empty() {
                 channel.write(input.as_bytes())?;
             }
-
-            // Read available output
-            let mut buf = vec![0u8; 4096];
-            let mut output = Vec::new();
-
-            loop {
-                match channel.read(&mut buf) {
-                    Ok(0) => break,
-                    Ok(n) => output.extend_from_slice(&buf[..n]),
-                    Err(_) => break,
-                }
-            }
-
-            Ok(SshOutputResponse {
-                data: String::from_utf8_lossy(&output).to_string(),
-                eof: channel.eof(),
-            })
+            Ok(())
         } else {
             Err(tacoshell_core::Error::Session("No active channel".to_string()))
         }
