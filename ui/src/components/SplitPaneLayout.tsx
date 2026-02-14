@@ -5,6 +5,7 @@ import 'react-mosaic-component/react-mosaic-component.css';
 import { useAppStore } from '../stores/appStore';
 import { TerminalView } from './Terminal';
 import { SecretsManager } from './SecretsManager';
+import { ServerDetail } from './ServerDetail';
 import type { Tab } from '../types';
 
 interface SplitPaneLayoutProps {
@@ -28,6 +29,12 @@ function TileContent({ tabId }: { tabId: string }) {
         <div className="tile-empty">No session</div>
       );
     case 'settings':
+      if (tab.id === 'secrets') {
+        return <SecretsManager />;
+      }
+      if (tab.serverId) {
+        return <ServerDetail serverId={tab.serverId} />;
+      }
       return <SettingsPanel />;
     case 'sftp':
       return <SftpPlaceholder />;
@@ -38,7 +45,8 @@ function TileContent({ tabId }: { tabId: string }) {
   }
 }
 
-function SettingsPanel() {
+export function SettingsPanel() {
+  const { theme, setTheme, fontSize, setFontSize, fontFamily, setFontFamily } = useAppStore();
   const [activeSection, setActiveSection] = useState<'general' | 'secrets' | 'about'>('general');
 
   return (
@@ -72,21 +80,27 @@ function SettingsPanel() {
             <h3>Appearance</h3>
             <div className="setting-item">
               <label>Theme</label>
-              <select defaultValue="dark">
+              <select value={theme} onChange={(e) => setTheme(e.target.value as 'dark' | 'light')}>
                 <option value="dark">Dark</option>
                 <option value="light">Light (coming soon)</option>
               </select>
             </div>
             <div className="setting-item">
               <label>Font Size</label>
-              <input type="number" defaultValue={14} min={10} max={24} />
+              <input
+                type="number"
+                value={fontSize}
+                onChange={(e) => setFontSize(parseInt(e.target.value))}
+                min={10}
+                max={24}
+              />
             </div>
             <div className="setting-item">
               <label>Font Family</label>
-              <select defaultValue="consolas">
-                <option value="consolas">Consolas</option>
-                <option value="jetbrains">JetBrains Mono</option>
-                <option value="firacode">Fira Code</option>
+              <select value={fontFamily} onChange={(e) => setFontFamily(e.target.value)}>
+                <option value='Consolas, "Courier New", monospace'>Consolas</option>
+                <option value='"JetBrains Mono", monospace'>JetBrains Mono</option>
+                <option value='"Fira Code", monospace'>Fira Code</option>
               </select>
             </div>
           </section>

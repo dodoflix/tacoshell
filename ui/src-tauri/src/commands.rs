@@ -185,6 +185,7 @@ pub struct AddSecretRequest {
     pub name: String,
     pub kind: String,
     pub value: String,
+    pub username: Option<String>,
 }
 
 #[tauri::command]
@@ -199,7 +200,7 @@ pub fn add_secret(state: State<AppState>, request: AddSecretRequest) -> CommandR
     let encrypted_value = state.encryption.encrypt_string(&request.value)
         .map_err(CommandError::from)?;
 
-    let secret = Secret::new(request.name, kind, encrypted_value);
+    let secret = Secret::new(request.name, kind, encrypted_value, request.username);
     state.db.secrets().store(&secret).map_err(CommandError::from)?;
 
     Ok(SecretResponse::from(secret))

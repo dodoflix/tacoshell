@@ -13,7 +13,7 @@ interface ConnectDialogProps {
 }
 
 export function ConnectDialog({ server, onConnect, onCancel, loading, error }: ConnectDialogProps) {
-  const [authMethod, setAuthMethod] = useState<'password' | 'key' | 'agent'>('password');
+  const [authMethod, setAuthMethod] = useState<'password' | 'key' | 'agent' | 'stored'>('stored');
   const [password, setPassword] = useState('');
   const [privateKey, setPrivateKey] = useState('');
   const [passphrase, setPassphrase] = useState('');
@@ -27,9 +27,12 @@ export function ConnectDialog({ server, onConnect, onCancel, loading, error }: C
       onConnect(password, undefined, undefined);
     } else if (authMethod === 'key') {
       onConnect(undefined, privateKey, passphrase || undefined);
-    } else {
+    } else if (authMethod === 'agent') {
       // SSH Agent
       onConnect(undefined, undefined, undefined);
+    } else {
+      // Stored secret
+      onConnect();
     }
   };
 
@@ -49,6 +52,14 @@ export function ConnectDialog({ server, onConnect, onCancel, loading, error }: C
           <div className="form-group">
             <label>Authentication Method</label>
             <div className="auth-method-buttons">
+              <button
+                type="button"
+                className={`auth-method-btn ${authMethod === 'stored' ? 'active' : ''}`}
+                onClick={() => setAuthMethod('stored')}
+              >
+                <Lock size={16} />
+                Saved
+              </button>
               <button
                 type="button"
                 className={`auth-method-btn ${authMethod === 'password' ? 'active' : ''}`}
@@ -75,6 +86,13 @@ export function ConnectDialog({ server, onConnect, onCancel, loading, error }: C
               </button>
             </div>
           </div>
+
+          {authMethod === 'stored' && (
+            <div className="agent-info">
+              <p>Will use the credentials linked to this server.</p>
+              <p className="hint">If no secrets are linked, it will fall back to SSH Agent.</p>
+            </div>
+          )}
 
           {authMethod === 'password' && (
             <div className="form-group">

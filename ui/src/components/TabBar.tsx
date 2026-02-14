@@ -1,11 +1,24 @@
 // Tab bar component
 
-import { X } from 'lucide-react';
+import { X, Terminal, FolderOpen, Box } from 'lucide-react';
 import { useAppStore } from '../stores/appStore';
 import { disconnectSsh } from '../hooks/useTauri';
 
 export function TabBar() {
   const { tabs, activeTabId, setActiveTab, removeTab, removeSession } = useAppStore();
+
+  const getTabIcon = (type: string) => {
+    switch (type) {
+      case 'terminal':
+        return <Terminal size={14} />;
+      case 'sftp':
+        return <FolderOpen size={14} />;
+      case 'k8s':
+        return <Box size={14} />;
+      default:
+        return null;
+    }
+  };
 
   const handleCloseTab = async (tabId: string, sessionId?: string) => {
     if (sessionId) {
@@ -19,6 +32,14 @@ export function TabBar() {
     removeTab(tabId);
   };
 
+  const handleMouseDown = (e: React.MouseEvent, tabId: string, sessionId?: string) => {
+    // 1 is middle click
+    if (e.button === 1) {
+      e.preventDefault();
+      handleCloseTab(tabId, sessionId);
+    }
+  };
+
   if (tabs.length === 0) {
     return null;
   }
@@ -30,7 +51,9 @@ export function TabBar() {
           key={tab.id}
           className={`tab ${activeTabId === tab.id ? 'active' : ''}`}
           onClick={() => setActiveTab(tab.id)}
+          onMouseDown={(e) => handleMouseDown(e, tab.id, tab.sessionId)}
         >
+          {getTabIcon(tab.type)}
           <span className="tab-title">{tab.title}</span>
           <button
             className="tab-close"

@@ -43,6 +43,7 @@ export interface AddSecretRequest {
   name: string;
   kind: string;
   value: string;
+  username?: string;
 }
 
 export interface ConnectRequest {

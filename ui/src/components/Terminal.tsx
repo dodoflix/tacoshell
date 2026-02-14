@@ -6,6 +6,7 @@ import { FitAddon } from '@xterm/addon-fit';
 import '@xterm/xterm/css/xterm.css';
 import { listen, UnlistenFn } from '@tauri-apps/api/event';
 import { sendSshInput, resizeTerminal } from '../hooks/useTauri';
+import { useAppStore } from '../stores/appStore';
 
 interface SshOutputEvent {
   session_id: string;
@@ -19,6 +20,7 @@ interface TerminalViewProps {
 }
 
 export function TerminalView({ sessionId, onDisconnect }: TerminalViewProps) {
+  const { fontSize, fontFamily } = useAppStore();
   const terminalRef = useRef<HTMLDivElement>(null);
   const xtermRef = useRef<Terminal | null>(null);
   const fitAddonRef = useRef<FitAddon | null>(null);
@@ -30,8 +32,8 @@ export function TerminalView({ sessionId, onDisconnect }: TerminalViewProps) {
     // Create terminal
     const terminal = new Terminal({
       cursorBlink: true,
-      fontSize: 14,
-      fontFamily: 'Consolas, "Courier New", monospace',
+      fontSize: fontSize,
+      fontFamily: fontFamily,
       theme: {
         background: '#1e1e1e',
         foreground: '#d4d4d4',

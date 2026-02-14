@@ -14,6 +14,9 @@ interface AppState {
   tabs: Tab[];
   activeTabId: string | null;
   sidebarOpen: boolean;
+  theme: 'dark' | 'light';
+  fontSize: number;
+  fontFamily: string;
 
   // Actions
   setServers: (servers: Server[]) => void;
@@ -32,6 +35,9 @@ interface AppState {
   setActiveTab: (id: string) => void;
 
   toggleSidebar: () => void;
+  setTheme: (theme: 'dark' | 'light') => void;
+  setFontSize: (fontSize: number) => void;
+  setFontFamily: (fontFamily: string) => void;
 }
 
 export const useAppStore = create<AppState>()(
@@ -44,6 +50,9 @@ export const useAppStore = create<AppState>()(
       tabs: [],
       activeTabId: null,
       sidebarOpen: true,
+      theme: 'dark',
+      fontSize: 14,
+      fontFamily: 'Consolas, "Courier New", monospace',
 
       // Server actions
       setServers: (servers) => set({ servers }),
@@ -76,10 +85,18 @@ export const useAppStore = create<AppState>()(
       }),
 
       // Tab actions
-      addTab: (tab) => set((state) => ({
-        tabs: [...state.tabs, tab],
-        activeTabId: tab.id,
-      })),
+      addTab: (tab) => set((state) => {
+        const existingTab = state.tabs.find((t) => t.id === tab.id);
+        if (existingTab) {
+          console.log(`Tab ${tab.id} already exists, activating it.`);
+          return { activeTabId: tab.id };
+        }
+        console.log(`Adding new tab ${tab.id}`);
+        return {
+          tabs: [...state.tabs, tab],
+          activeTabId: tab.id,
+        };
+      }),
       removeTab: (id) => set((state) => {
         const newTabs = state.tabs.filter((t) => t.id !== id);
         let activeTabId = state.activeTabId;
@@ -94,6 +111,9 @@ export const useAppStore = create<AppState>()(
 
       // UI actions
       toggleSidebar: () => set((state) => ({ sidebarOpen: !state.sidebarOpen })),
+      setTheme: (theme: 'dark' | 'light') => set({ theme }),
+      setFontSize: (fontSize: number) => set({ fontSize }),
+      setFontFamily: (fontFamily: string) => set({ fontFamily }),
     }),
     {
       name: 'tacoshell-storage',
@@ -101,6 +121,9 @@ export const useAppStore = create<AppState>()(
         sidebarOpen: state.sidebarOpen,
         tabs: state.tabs,
         activeTabId: state.activeTabId,
+        theme: state.theme,
+        fontSize: state.fontSize,
+        fontFamily: state.fontFamily,
       }),
     }
   )

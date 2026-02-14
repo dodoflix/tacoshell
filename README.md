@@ -76,7 +76,7 @@ tacoshell/
 ├── crates/                    # Rust workspace crates
 │   ├── tacoshell-core/        # Core types, traits, and error handling
 │   ├── tacoshell-ssh/         # SSH client implementation
-│   ├── tacoshell-db/          # SQLite database layer
+│   ├── tacoshell-storage/     # JSON storage layer
 │   ├── tacoshell-secrets/     # Secret encryption/decryption
 │   ├── tacoshell-transfer/    # SFTP/FTP file transfer
 │   └── tacoshell-k8s/         # Kubernetes integration

@@ -24,6 +24,8 @@ pub struct Secret {
     pub id: Uuid,
     pub name: String,
     pub kind: SecretKind,
+    /// Optional username (used for Password kind)
+    pub username: Option<String>,
     /// Encrypted value - decrypted only when needed
     #[serde(skip_serializing)]
     pub encrypted_value: Vec<u8>,
@@ -32,12 +34,13 @@ pub struct Secret {
 }
 
 impl Secret {
-    pub fn new(name: String, kind: SecretKind, encrypted_value: Vec<u8>) -> Self {
+    pub fn new(name: String, kind: SecretKind, encrypted_value: Vec<u8>, username: Option<String>) -> Self {
         let now = Utc::now();
         Self {
             id: Uuid::new_v4(),
             name,
             kind,
+            username,
             encrypted_value,
             created_at: now,
             updated_at: now,

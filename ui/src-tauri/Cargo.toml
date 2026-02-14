@@ -25,7 +25,7 @@ anyhow = "1.0"
 
 # Internal crates
 tacoshell-core = { path = "../../crates/tacoshell-core" }
-tacoshell-db = { path = "../../crates/tacoshell-db" }
+tacoshell-storage = { path = "../../crates/tacoshell-storage" }
 tacoshell-secrets = { path = "../../crates/tacoshell-secrets" }
 tacoshell-ssh = { path = "../../crates/tacoshell-ssh" }
 

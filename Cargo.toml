@@ -6,7 +6,7 @@ members = [
     "crates/tacoshell-ssh",
     "crates/tacoshell-transfer",
     "crates/tacoshell-k8s",
-    "crates/tacoshell-db",
+    "crates/tacoshell-storage",
     "ui/src-tauri",
 ]
 
@@ -24,7 +24,7 @@ tacoshell-secrets = { path = "crates/tacoshell-secrets" }
 tacoshell-ssh = { path = "crates/tacoshell-ssh" }
 tacoshell-transfer = { path = "crates/tacoshell-transfer" }
 tacoshell-k8s = { path = "crates/tacoshell-k8s" }
-tacoshell-db = { path = "crates/tacoshell-db" }
+tacoshell-storage = { path = "crates/tacoshell-storage" }
 
 # Async runtime
 tokio = { version = "1.43", features = ["full"] }
@@ -37,8 +37,7 @@ thiserror = "2.0"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 
-# Database
-rusqlite = { version = "0.32", features = ["bundled"] }
+# Storage
 
 # SSH
 ssh2 = "0.9"

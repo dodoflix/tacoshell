@@ -1,13 +1,12 @@
 [package]
-name = "tacoshell-db"
-description = "SQLite database layer for Tacoshell"
+name = "tacoshell-storage"
+description = "JSON storage layer for Tacoshell"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
 
 [dependencies]
 tacoshell-core.workspace = true
-rusqlite.workspace = true
 tokio.workspace = true
 anyhow.workspace = true
 thiserror.workspace = true

@@ -4,7 +4,7 @@ use std::collections::HashMap;
 use std::sync::atomic::AtomicBool;
 use std::sync::{Arc, RwLock};
 use tacoshell_core::Result;
-use tacoshell_db::Database;
+use tacoshell_storage::Storage;
 use tacoshell_secrets::SecretEncryption;
 use tokio::sync::mpsc;
 use uuid::Uuid;
@@ -27,8 +27,8 @@ pub struct ActiveSession {
 
 /// Application state shared across all Tauri commands
 pub struct AppState {
-    /// Database connection
-    pub db: Database,
+    /// Storage backend
+    pub db: Storage,
     /// Secret encryption handler
     pub encryption: SecretEncryption,
     /// Active SSH sessions by session ID
@@ -46,10 +46,10 @@ impl AppState {
         std::fs::create_dir_all(&data_dir)
             .map_err(|e| tacoshell_core::Error::Config(format!("Failed to create data dir: {}", e)))?;
 
-        let db_path = data_dir.join("tacoshell.db");
-        tracing::info!("Opening database at {:?}", db_path);
+        let storage_path = data_dir.join("storage.json");
+        tracing::info!("Opening storage at {:?}", storage_path);
 
-        let db = Database::open(&db_path)?;
+        let db = Storage::open(&storage_path)?;
 
         // Get or create master key from OS keyring
         let master_key = Self::get_or_create_master_key()?;

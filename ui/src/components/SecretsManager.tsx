@@ -136,6 +136,7 @@ function AddSecretForm({ onClose, onAdded }: AddSecretFormProps) {
   const [name, setName] = useState('');
   const [kind, setKind] = useState('password');
   const [value, setValue] = useState('');
+  const [username, setUsername] = useState('');
   const [showValue, setShowValue] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -146,7 +147,12 @@ function AddSecretForm({ onClose, onAdded }: AddSecretFormProps) {
     setLoading(true);
 
     try {
-      await createSecret({ name, kind, value });
+      await createSecret({
+        name,
+        kind,
+        value,
+        username: kind === 'password' ? username : undefined
+      });
       onAdded();
       onClose();
     } catch (err) {
@@ -190,6 +196,19 @@ function AddSecretForm({ onClose, onAdded }: AddSecretFormProps) {
               <option value="kubeconfig">Kubeconfig</option>
             </select>
           </div>
+
+          {kind === 'password' && (
+            <div className="form-group">
+              <label htmlFor="secret-username">Username</label>
+              <input
+                id="secret-username"
+                type="text"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                placeholder="root"
+              />
+            </div>
+          )}
 
           <div className="form-group">
             <label htmlFor="secret-value">
