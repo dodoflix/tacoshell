@@ -6,6 +6,7 @@ import { useAppStore } from '../stores/appStore';
 import { fetchServers, deleteServer, connectSsh } from '../hooks/useTauri';
 import type { Server as ServerType } from '../types';
 import { AddServerDialog } from './AddServerDialog';
+import { ConnectDialog } from './ConnectDialog';
 
 export function Sidebar() {
   const {
@@ -18,7 +19,9 @@ export function Sidebar() {
   } = useAppStore();
 
   const [showAddDialog, setShowAddDialog] = useState(false);
-  const [connecting, setConnecting] = useState<string | null>(null);
+  const [connectingServer, setConnectingServer] = useState<ServerType | null>(null);
+  const [connectError, setConnectError] = useState<string | null>(null);
+  const [isConnecting, setIsConnecting] = useState(false);
 
   useEffect(() => {
     loadServers();
@@ -33,29 +36,53 @@ export function Sidebar() {
     }
   };
 
-  const handleConnect = async (server: ServerType) => {
-    setConnecting(server.id);
+  // Open the connect dialog
+  const handleConnectClick = (server: ServerType) => {
+    setConnectingServer(server);
+    setConnectError(null);
+  };
+
+  // Actually perform the connection
+  const handleConnect = async (password?: string, privateKey?: string, passphrase?: string) => {
+    if (!connectingServer) return;
+
+    setIsConnecting(true);
+    setConnectError(null);
+
     try {
-      const session = await connectSsh({ server_id: server.id });
+      const session = await connectSsh({
+        server_id: connectingServer.id,
+        password,
+        private_key: privateKey,
+        passphrase,
+      });
 
       addSession({
         sessionId: session.session_id,
-        serverId: server.id,
+        serverId: connectingServer.id,
         connected: true,
       });
 
       addTab({
         id: `terminal-${session.session_id}`,
         type: 'terminal',
-        title: server.name,
-        serverId: server.id,
+        title: connectingServer.name,
+        serverId: connectingServer.id,
         sessionId: session.session_id,
       });
-    } catch (error) {
+
+      // Close dialog on success
+      setConnectingServer(null);
+    } catch (error: unknown) {
       console.error('Failed to connect:', error);
-      alert(`Failed to connect: ${error}`);
+      const errorMessage = error instanceof Error
+        ? error.message
+        : typeof error === 'object' && error !== null && 'message' in error
+          ? String((error as { message: unknown }).message)
+          : String(error);
+      setConnectError(errorMessage);
     } finally {
-      setConnecting(null);
+      setIsConnecting(false);
     }
   };
 
@@ -121,8 +148,8 @@ export function Sidebar() {
               </div>
               <div className="server-actions">
                 <button
-                  onClick={() => handleConnect(server)}
-                  disabled={connecting === server.id}
+                  onClick={() => handleConnectClick(server)}
+                  disabled={isConnecting && connectingServer?.id === server.id}
                   title="Connect"
                 >
                   <Play size={14} />
@@ -147,6 +174,16 @@ export function Sidebar() {
         <AddServerDialog
           onClose={() => setShowAddDialog(false)}
           onAdded={loadServers}
+        />
+      )}
+
+      {connectingServer && (
+        <ConnectDialog
+          server={connectingServer}
+          onConnect={handleConnect}
+          onCancel={() => setConnectingServer(null)}
+          loading={isConnecting}
+          error={connectError}
         />
       )}
     </div>
