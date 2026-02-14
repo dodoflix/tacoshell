@@ -1,6 +1,6 @@
 //! Tauri commands for IPC with the frontend
 
-use crate::state::{ActiveSession, AppState};
+use crate::state::{ActiveSession, AppState, SshInput};
 use serde::{Deserialize, Serialize};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
@@ -9,23 +9,35 @@ use std::time::Duration;
 use tacoshell_core::{AuthMethod, Protocol, Secret, SecretKind, Server, ServerSecret};
 use tacoshell_ssh::{PtyConfig, SshChannel, SshSession};
 use tauri::{AppHandle, Emitter, State};
+use tokio::sync::mpsc;
 use uuid::Uuid;
 
 /// Error response for commands
 #[derive(Debug, Serialize)]
 pub struct CommandError {
     pub message: String,
+    pub code: Option<String>,
 }
 
 impl From<tacoshell_core::Error> for CommandError {
     fn from(err: tacoshell_core::Error) -> Self {
+        let code = match &err {
+            tacoshell_core::Error::Connection(_) => Some("CONNECTION_ERROR".to_string()),
+            tacoshell_core::Error::Authentication(_) => Some("AUTH_FAILED".to_string()),
+            tacoshell_core::Error::Session(_) => Some("SESSION_ERROR".to_string()),
+            tacoshell_core::Error::Database(_) => Some("DATABASE_ERROR".to_string()),
+            tacoshell_core::Error::Secret(_) => Some("SECRET_ERROR".to_string()),
+            _ => None,
+        };
+
         Self {
             message: err.to_string(),
+            code,
         }
     }
 }
 
-type CommandResult<T> = Result<T, CommandError>;
+pub type CommandResult<T> = Result<T, CommandError>;
 
 // ============================================================================
 // Server Commands
@@ -76,19 +88,19 @@ pub struct AddServerRequest {
 pub fn add_server(state: State<AppState>, request: AddServerRequest) -> CommandResult<ServerResponse> {
     // Input validation
     if request.name.trim().is_empty() {
-        return Err(CommandError { message: "Server name cannot be empty".to_string() });
+        return Err(CommandError { message: "Server name cannot be empty".to_string(), code: None });
     }
     if request.name.len() > 255 {
-        return Err(CommandError { message: "Server name too long (max 255 characters)".to_string() });
+        return Err(CommandError { message: "Server name too long (max 255 characters)".to_string(), code: None });
     }
     if request.host.trim().is_empty() {
-        return Err(CommandError { message: "Host cannot be empty".to_string() });
+        return Err(CommandError { message: "Host cannot be empty".to_string(), code: None });
     }
     if request.port == 0 {
-        return Err(CommandError { message: "Port must be between 1 and 65535".to_string() });
+        return Err(CommandError { message: "Port must be between 1 and 65535".to_string(), code: None });
     }
     if request.username.trim().is_empty() {
-        return Err(CommandError { message: "Username cannot be empty".to_string() });
+        return Err(CommandError { message: "Username cannot be empty".to_string(), code: None });
     }
 
     let mut server = Server::new(
@@ -117,11 +129,11 @@ pub fn add_server(state: State<AppState>, request: AddServerRequest) -> CommandR
 #[tauri::command]
 pub fn update_server(state: State<AppState>, request: ServerResponse) -> CommandResult<()> {
     let id = Uuid::parse_str(&request.id)
-        .map_err(|e| CommandError { message: format!("Invalid UUID: {}", e) })?;
+        .map_err(|e| CommandError { message: format!("Invalid UUID: {}", e), code: Some("INVALID_UUID".into()) })?;
 
     let mut server = state.db.servers().get(id)
         .map_err(CommandError::from)?
-        .ok_or_else(|| CommandError { message: "Server not found".to_string() })?;
+        .ok_or_else(|| CommandError { message: "Server not found".to_string(), code: Some("NOT_FOUND".into()) })?;
 
     server.name = request.name;
     server.host = request.host;
@@ -136,7 +148,7 @@ pub fn update_server(state: State<AppState>, request: ServerResponse) -> Command
 #[tauri::command]
 pub fn delete_server(state: State<AppState>, id: String) -> CommandResult<()> {
     let uuid = Uuid::parse_str(&id)
-        .map_err(|e| CommandError { message: format!("Invalid UUID: {}", e) })?;
+        .map_err(|e| CommandError { message: format!("Invalid UUID: {}", e), code: Some("INVALID_UUID".into()) })?;
     state.db.servers().delete(uuid).map_err(CommandError::from)?;
     Ok(())
 }
@@ -196,7 +208,7 @@ pub fn add_secret(state: State<AppState>, request: AddSecretRequest) -> CommandR
 #[tauri::command]
 pub fn delete_secret(state: State<AppState>, id: String) -> CommandResult<()> {
     let uuid = Uuid::parse_str(&id)
-        .map_err(|e| CommandError { message: format!("Invalid UUID: {}", e) })?;
+        .map_err(|e| CommandError { message: format!("Invalid UUID: {}", e), code: Some("INVALID_UUID".into()) })?;
     state.db.secrets().delete(uuid).map_err(CommandError::from)?;
     Ok(())
 }
@@ -209,9 +221,9 @@ pub fn link_secret_to_server(
     priority: Option<i32>,
 ) -> CommandResult<()> {
     let server_uuid = Uuid::parse_str(&server_id)
-        .map_err(|e| CommandError { message: format!("Invalid server UUID: {}", e) })?;
+        .map_err(|e| CommandError { message: format!("Invalid server UUID: {}", e), code: Some("INVALID_UUID".into()) })?;
     let secret_uuid = Uuid::parse_str(&secret_id)
-        .map_err(|e| CommandError { message: format!("Invalid secret UUID: {}", e) })?;
+        .map_err(|e| CommandError { message: format!("Invalid secret UUID: {}", e), code: Some("INVALID_UUID".into()) })?;
 
     let link = ServerSecret::new(server_uuid, secret_uuid, priority.unwrap_or(0));
     state.db.servers().link_secret(&link).map_err(CommandError::from)?;
@@ -225,9 +237,9 @@ pub fn unlink_secret_from_server(
     secret_id: String,
 ) -> CommandResult<()> {
     let server_uuid = Uuid::parse_str(&server_id)
-        .map_err(|e| CommandError { message: format!("Invalid server UUID: {}", e) })?;
+        .map_err(|e| CommandError { message: format!("Invalid server UUID: {}", e), code: Some("INVALID_UUID".into()) })?;
     let secret_uuid = Uuid::parse_str(&secret_id)
-        .map_err(|e| CommandError { message: format!("Invalid secret UUID: {}", e) })?;
+        .map_err(|e| CommandError { message: format!("Invalid secret UUID: {}", e), code: Some("INVALID_UUID".into()) })?;
 
     state.db.servers().unlink_secret(server_uuid, secret_uuid).map_err(CommandError::from)?;
     Ok(())
@@ -270,11 +282,11 @@ pub fn connect_ssh(
     request: ConnectRequest,
 ) -> CommandResult<SessionResponse> {
     let server_uuid = Uuid::parse_str(&request.server_id)
-        .map_err(|e| CommandError { message: format!("Invalid server UUID: {}", e) })?;
+        .map_err(|e| CommandError { message: format!("Invalid server UUID: {}", e), code: Some("INVALID_UUID".into()) })?;
 
     let server = state.db.servers().get(server_uuid)
         .map_err(CommandError::from)?
-        .ok_or_else(|| CommandError { message: "Server not found".to_string() })?;
+        .ok_or_else(|| CommandError { message: "Server not found".to_string(), code: Some("NOT_FOUND".into()) })?;
 
     // Determine authentication method
     let auth = if let Some(password) = request.password {
@@ -293,7 +305,7 @@ pub fn connect_ssh(
             let decrypted = state.encryption.decrypt(&secret.encrypted_value)
                 .map_err(CommandError::from)?;
             let value = String::from_utf8(decrypted)
-                .map_err(|e| CommandError { message: format!("Invalid secret encoding: {}", e) })?;
+                .map_err(|e| CommandError { message: format!("Invalid secret encoding: {}", e), code: Some("DECODE_ERROR".into()) })?;
 
             match secret.kind {
                 SecretKind::Password => AuthMethod::Password(value),
@@ -301,7 +313,7 @@ pub fn connect_ssh(
                     key: value,
                     passphrase: None,
                 },
-                _ => return Err(CommandError { message: "Unsupported secret type for SSH".to_string() }),
+                _ => return Err(CommandError { message: "Unsupported secret type for SSH".to_string(), code: Some("UNSUPPORTED_SECRET".into()) }),
             }
         } else {
             // Try SSH agent as fallback
@@ -330,21 +342,22 @@ pub fn connect_ssh(
     let session_id = Uuid::new_v4();
     let session_id_str = session_id.to_string();
     let stop_flag = Arc::new(AtomicBool::new(false));
+    let (input_tx, mut input_rx) = mpsc::unbounded_channel::<SshInput>();
 
     // Store the session
     state.add_session(session_id, ActiveSession {
-        session: ssh_session,
-        channel: Some(ssh_channel),
+        input_tx,
         stop_flag: stop_flag.clone(),
     });
 
     // Spawn background thread to read output and emit events
     let app_handle = app.clone();
     let session_id_for_thread = session_id_str.clone();
-    let sessions = state.sessions.clone();
 
     thread::spawn(move || {
         let mut buf = vec![0u8; 8192];
+        let mut ssh_channel = ssh_channel;
+        let _ssh_session = ssh_session; // Keep session alive
 
         loop {
             // Check if we should stop
@@ -352,45 +365,62 @@ pub fn connect_ssh(
                 break;
             }
 
-            // Try to read from the channel - hold lock briefly
-            let read_result = {
-                let mut sessions_guard = sessions.lock().unwrap();
-                if let Some(session) = sessions_guard.get_mut(&session_id) {
-                    if let Some(channel) = &mut session.channel {
-                        // Blocking read with timeout
-                        match channel.read(&mut buf) {
-                            Ok(n) if n > 0 => Some((buf[..n].to_vec(), channel.eof())),
-                            Ok(_) => None, // Timeout or no data
-                            Err(_) => None, // Timeout or error
-                        }
-                    } else {
-                        None
+            // Handle inputs
+            while let Ok(input) = input_rx.try_recv() {
+                match input {
+                    SshInput::Data(data) => {
+                        let _ = ssh_channel.write_all(data.as_bytes());
+                        let _ = ssh_channel.flush();
                     }
-                } else {
-                    // Session was removed
-                    break;
-                }
-            };
-            // Lock is released here
-
-            if let Some((data, eof)) = read_result {
-                let output = String::from_utf8_lossy(&data).to_string();
-                if !output.is_empty() {
-                    let _ = app_handle.emit("ssh-output", SshOutputEvent {
-                        session_id: session_id_for_thread.clone(),
-                        data: output,
-                        eof,
-                    });
-                }
-
-                if eof {
-                    break;
+                    SshInput::Resize { cols, rows } => {
+                        let _ = ssh_channel.resize(cols, rows);
+                    }
+                    SshInput::Disconnect => {
+                        stop_flag.store(true, Ordering::Relaxed);
+                        break;
+                    }
                 }
             }
 
-            // Small sleep to prevent busy-waiting on timeout
+            if stop_flag.load(Ordering::Relaxed) {
+                break;
+            }
+
+            // Blocking read with timeout
+            match ssh_channel.read(&mut buf) {
+                Ok(n) if n > 0 => {
+                    let output = String::from_utf8_lossy(&buf[..n]).to_string();
+                    if !output.is_empty() {
+                        let _ = app_handle.emit("ssh-output", SshOutputEvent {
+                            session_id: session_id_for_thread.clone(),
+                            data: output,
+                            eof: ssh_channel.eof(),
+                        });
+                    }
+
+                    if ssh_channel.eof() {
+                        break;
+                    }
+                }
+                Ok(_) => {
+                    // Timeout or no data
+                }
+                Err(_) => {
+                    // Timeout or error
+                }
+            }
+
+            // Small sleep to prevent busy-waiting
             thread::sleep(Duration::from_millis(10));
         }
+
+        // Cleanup
+        let _ = ssh_channel.close();
+        let _ = app_handle.emit("ssh-output", SshOutputEvent {
+            session_id: session_id_for_thread,
+            data: "".to_string(),
+            eof: true,
+        });
     });
 
     Ok(SessionResponse {
@@ -403,15 +433,12 @@ pub fn connect_ssh(
 #[tauri::command(rename_all = "snake_case")]
 pub fn disconnect_ssh(state: State<AppState>, session_id: String) -> CommandResult<()> {
     let uuid = Uuid::parse_str(&session_id)
-        .map_err(|e| CommandError { message: format!("Invalid session UUID: {}", e) })?;
+        .map_err(|e| CommandError { message: format!("Invalid session UUID: {}", e), code: Some("INVALID_UUID".into()) })?;
 
-    if let Some(mut session) = state.remove_session(&uuid) {
+    if let Some(session) = state.remove_session(&uuid) {
         // Signal the background thread to stop
+        let _ = session.input_tx.send(SshInput::Disconnect);
         session.stop_flag.store(true, Ordering::Relaxed);
-
-        if let Some(mut channel) = session.channel.take() {
-            let _ = channel.close();
-        }
     }
 
     Ok(())
@@ -431,33 +458,13 @@ pub fn send_ssh_input(
     tracing::debug!("send_ssh_input called: session={}, input_len={}", session_id, input.len());
 
     let uuid = Uuid::parse_str(&session_id)
-        .map_err(|e| CommandError { message: format!("Invalid session UUID: {}", e) })?;
+        .map_err(|e| CommandError { message: format!("Invalid session UUID: {}", e), code: Some("INVALID_UUID".into()) })?;
 
-    let result = state.with_session(&uuid, |active_session| {
-        if let Some(channel) = &mut active_session.channel {
-            tracing::debug!("Writing {} bytes to channel", input.len());
+    state.with_session(&uuid, |active_session| {
+        let _ = active_session.input_tx.send(SshInput::Data(input));
+    }).ok_or_else(|| CommandError { message: "Session not found".to_string(), code: Some("NOT_FOUND".into()) })?;
 
-            // Use write_all for reliable writes (session is in blocking mode with timeout)
-            channel.write_all(input.as_bytes())?;
-            let _ = channel.flush();
-
-            tracing::debug!("Write completed successfully");
-            Ok(())
-        } else {
-            tracing::error!("No active channel for session {}", session_id);
-            Err(tacoshell_core::Error::Session("No active channel".to_string()))
-        }
-    });
-
-    match &result {
-        Some(Ok(_)) => tracing::debug!("Input sent successfully"),
-        Some(Err(e)) => tracing::error!("Error sending input: {}", e),
-        None => tracing::error!("Session not found: {}", session_id),
-    }
-
-    result
-        .ok_or_else(|| CommandError { message: "Session not found".to_string() })?
-        .map_err(CommandError::from)
+    Ok(())
 }
 
 #[tauri::command(rename_all = "snake_case")]
@@ -468,19 +475,13 @@ pub fn resize_terminal(
     rows: u32,
 ) -> CommandResult<()> {
     let uuid = Uuid::parse_str(&session_id)
-        .map_err(|e| CommandError { message: format!("Invalid session UUID: {}", e) })?;
+        .map_err(|e| CommandError { message: format!("Invalid session UUID: {}", e), code: Some("INVALID_UUID".into()) })?;
 
-    let result = state.with_session(&uuid, |session| {
-        if let Some(channel) = &mut session.channel {
-            channel.resize(cols, rows)
-        } else {
-            Err(tacoshell_core::Error::Session("No active channel".to_string()))
-        }
-    });
+    state.with_session(&uuid, |session| {
+        let _ = session.input_tx.send(SshInput::Resize { cols, rows });
+    }).ok_or_else(|| CommandError { message: "Session not found".to_string(), code: Some("NOT_FOUND".into()) })?;
 
-    result
-        .ok_or_else(|| CommandError { message: "Session not found".to_string() })?
-        .map_err(CommandError::from)
+    Ok(())
 }
 
 

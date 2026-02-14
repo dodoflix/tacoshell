@@ -2,21 +2,26 @@
 
 use std::collections::HashMap;
 use std::sync::atomic::AtomicBool;
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, RwLock};
 use tacoshell_core::Result;
 use tacoshell_db::Database;
 use tacoshell_secrets::SecretEncryption;
-use tacoshell_ssh::{SshChannel, SshSession};
+use tokio::sync::mpsc;
 use uuid::Uuid;
 
 const KEYRING_SERVICE: &str = "tacoshell";
 const KEYRING_USER: &str = "master-key";
 
-/// Active SSH session with its channel
+/// Message to send to the SSH session
+pub enum SshInput {
+    Data(String),
+    Resize { cols: u32, rows: u32 },
+    Disconnect,
+}
+
+/// Active SSH session with its communication channels
 pub struct ActiveSession {
-    pub session: SshSession,
-    pub channel: Option<SshChannel>,
-    /// Flag to stop the background reader thread
+    pub input_tx: mpsc::UnboundedSender<SshInput>,
     pub stop_flag: Arc<AtomicBool>,
 }
 
@@ -27,7 +32,7 @@ pub struct AppState {
     /// Secret encryption handler
     pub encryption: SecretEncryption,
     /// Active SSH sessions by session ID
-    pub sessions: Arc<Mutex<HashMap<Uuid, ActiveSession>>>,
+    pub sessions: Arc<RwLock<HashMap<Uuid, ActiveSession>>>,
 }
 
 impl AppState {
@@ -53,7 +58,7 @@ impl AppState {
         Ok(Self {
             db,
             encryption,
-            sessions: Arc::new(Mutex::new(HashMap::new())),
+            sessions: Arc::new(RwLock::new(HashMap::new())),
         })
     }
 
@@ -73,8 +78,10 @@ impl AppState {
                 let new_key = Self::generate_master_key();
                 tracing::info!("Generated new master key, storing in OS keyring");
 
-                entry.set_password(&new_key)
-                    .map_err(|e| tacoshell_core::Error::Config(format!("Failed to store master key: {}", e)))?;
+                if let Err(e) = entry.set_password(&new_key) {
+                    tracing::error!("Failed to store master key in keyring: {}. Using fallback.", e);
+                    return Ok(Self::derive_fallback_key());
+                }
 
                 Ok(new_key)
             }
@@ -116,7 +123,8 @@ impl AppState {
         // Try to read existing fallback key
         if let Ok(existing_key) = std::fs::read_to_string(&key_file) {
             let key = existing_key.trim().to_string();
-            if key.len() == 64 {
+            // We expect a 64-character hex string (32 bytes)
+            if key.len() == 64 && key.chars().all(|c| c.is_ascii_hexdigit()) {
                 tracing::warn!("Using file-based fallback key - OS keyring unavailable");
                 return key;
             }
@@ -128,9 +136,29 @@ impl AppState {
         let key = base16ct::lower::encode_string(&key_bytes);
 
         // Try to save it (ignore errors - we'll regenerate next time)
-        if let Ok(mut file) = std::fs::File::create(&key_file) {
-            let _ = file.write_all(key.as_bytes());
-            tracing::warn!("Created file-based fallback key at {:?} - OS keyring unavailable", key_file);
+        // Set restrictive permissions on Unix-like systems if possible
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::OpenOptionsExt;
+            let result = std::fs::OpenOptions::new()
+                .create(true)
+                .write(true)
+                .truncate(true)
+                .mode(0o600)
+                .open(&key_file);
+            
+            if let Ok(mut file) = result {
+                let _ = file.write_all(key.as_bytes());
+                tracing::warn!("Created file-based fallback key at {:?} with restrictive permissions", key_file);
+            }
+        }
+
+        #[cfg(not(unix))]
+        {
+            if let Ok(mut file) = std::fs::File::create(&key_file) {
+                let _ = file.write_all(key.as_bytes());
+                tracing::warn!("Created file-based fallback key at {:?} - OS keyring unavailable", key_file);
+            }
         }
 
         key
@@ -138,23 +166,23 @@ impl AppState {
 
     /// Add an active session
     pub fn add_session(&self, id: Uuid, session: ActiveSession) {
-        let mut sessions = self.sessions.lock().unwrap();
+        let mut sessions = self.sessions.write().unwrap();
         sessions.insert(id, session);
     }
 
     /// Remove an active session
     pub fn remove_session(&self, id: &Uuid) -> Option<ActiveSession> {
-        let mut sessions = self.sessions.lock().unwrap();
+        let mut sessions = self.sessions.write().unwrap();
         sessions.remove(id)
     }
 
-    /// Get mutable access to a session
+    /// Get access to a session
     pub fn with_session<F, R>(&self, id: &Uuid, f: F) -> Option<R>
     where
-        F: FnOnce(&mut ActiveSession) -> R,
+        F: FnOnce(&ActiveSession) -> R,
     {
-        let mut sessions = self.sessions.lock().unwrap();
-        sessions.get_mut(id).map(f)
+        let sessions = self.sessions.read().unwrap();
+        sessions.get(id).map(f)
     }
 }
 
