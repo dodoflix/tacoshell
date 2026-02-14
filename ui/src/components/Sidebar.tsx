@@ -1,41 +1,19 @@
-// Sidebar component for server list
-
 import { useEffect, useState } from 'react';
-import {
-  Plus,
-  Settings,
-  ChevronRight,
-  Trash2,
-  Play,
-  LayoutGrid,
-  Shield,
-  FileText,
-  UserCheck,
-  Server as ServerIcon,
-  ChevronDown,
-  Terminal,
-  FolderOpen
-} from 'lucide-react';
 import { useAppStore } from '../stores/appStore';
-import { fetchServers, deleteServer, connectSsh } from '../hooks/useTauri';
+import { fetchServers, connectSsh } from '../hooks/useTauri';
 import type { Server as ServerType } from '../types';
 import { AddServerDialog } from './AddServerDialog';
 import { ConnectDialog } from './ConnectDialog';
 
 export function Sidebar() {
   const {
-    servers,
     setServers,
     sidebarOpen,
-    toggleSidebar,
     addTab,
     addSession,
-    activeTabId,
     setActiveTab,
   } = useAppStore();
 
-  const [navigation, setNavigation] = useState<'hosts' | 'secrets' | 'logs' | 'known_hosts' | 'settings'>('hosts');
-  const [expandedServers, setExpandedServers] = useState<Set<string>>(new Set());
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [connectingServer, setConnectingServer] = useState<ServerType | null>(null);
   const [isConnecting, setIsConnecting] = useState(false);
@@ -54,17 +32,9 @@ export function Sidebar() {
     }
   };
 
-  // Open the connect dialog
-  const handleConnectClick = (server: ServerType) => {
-    setConnectingServer(server);
-    setConnectError(null);
-  };
-
-  // Actually perform the connection
   const handleConnect = async (password?: string, privateKey?: string, passphrase?: string) => {
     if (!connectingServer) return;
 
-    // Check if we already have an active terminal tab for this server
     const existingTab = useAppStore.getState().tabs.find(
       t => t.type === 'terminal' && t.serverId === connectingServer.id
     );
@@ -100,235 +70,94 @@ export function Sidebar() {
         sessionId: session.session_id,
       });
 
-      // Close dialog on success
       setConnectingServer(null);
-    } catch (error: unknown) {
+    } catch (error: any) {
       console.error('Failed to connect:', error);
-      const errorMessage = error instanceof Error
-        ? error.message
-        : typeof error === 'object' && error !== null && 'message' in error
-          ? String((error as { message: unknown }).message)
-          : String(error);
-      setConnectError(errorMessage);
+      setConnectError(error.message || String(error));
     } finally {
       setIsConnecting(false);
     }
   };
 
-  const handleDelete = async (id: string) => {
-    if (confirm('Are you sure you want to delete this server?')) {
-      try {
-        await deleteServer(id);
-        await loadServers();
-      } catch (error) {
-        console.error('Failed to delete server:', error);
-      }
-    }
-  };
+  if (!sidebarOpen) return null;
 
-  const openSettings = () => {
-    const existingTab = useAppStore.getState().tabs.find(t => t.id === 'settings');
-    if (existingTab) {
-      setActiveTab('settings');
-      return;
-    }
-    setNavigation('settings');
-    addTab({
-      id: 'settings',
-      type: 'settings',
-      title: 'Settings',
-    });
-  };
-
-  const toggleServerExpand = (id: string, e: React.MouseEvent) => {
-    e.stopPropagation();
-    const newExpanded = new Set(expandedServers);
-    if (newExpanded.has(id)) {
-      newExpanded.delete(id);
-    } else {
-      newExpanded.add(id);
-    }
-    setExpandedServers(newExpanded);
-  };
-
-  const openServerDetail = (server: ServerType) => {
-    const existingTab = useAppStore.getState().tabs.find(
-      t => t.id === `server-${server.id}`
-    );
-    if (existingTab) {
-      setActiveTab(existingTab.id);
-      return;
-    }
-
-    addTab({
-      id: `server-${server.id}`,
-      type: 'settings', // Reusing settings type for now, or create a new one
-      title: `Server: ${server.name}`,
-      serverId: server.id,
-    });
-  };
-
-  if (!sidebarOpen) {
-    return (
-      <div className="sidebar-collapsed">
-        <button onClick={toggleSidebar} className="sidebar-toggle">
-          <ChevronRight size={20} />
-        </button>
-      </div>
-    );
-  }
+  const groups = [
+    { name: 'Production', color: 'bg-emerald-500', count: 12, shadow: 'shadow-[0_0_8px_rgba(16,185,129,0.4)]' },
+    { name: 'Staging', color: 'bg-amber-500', count: 4, shadow: 'shadow-[0_0_8px_rgba(245,158,11,0.4)]' },
+    { name: 'AWS East', color: 'bg-purple-500', count: 8, shadow: 'shadow-[0_0_8px_rgba(168,85,247,0.4)]' },
+  ];
 
   return (
-    <div className="sidebar">
-      <div className="sidebar-nav">
-        <button
-          className={`nav-item ${navigation === 'hosts' ? 'active' : ''}`}
-          onClick={() => setNavigation('hosts')}
-        >
-          <LayoutGrid size={18} />
-          <span>Hosts</span>
-        </button>
-        <button
-          className={`nav-item ${navigation === 'secrets' ? 'active' : ''}`}
-          onClick={() => {
-            const existingTab = useAppStore.getState().tabs.find(t => t.id === 'secrets');
-            if (existingTab) {
-              setActiveTab('secrets');
-            } else {
-              addTab({ id: 'secrets', type: 'settings', title: 'Secrets' });
-            }
-            setNavigation('secrets');
-          }}
-        >
-          <Shield size={18} />
-          <span>Keychain</span>
-        </button>
-        <button
-          className={`nav-item ${navigation === 'logs' ? 'active' : ''}`}
-          onClick={() => setNavigation('logs')}
-        >
-          <FileText size={18} />
-          <span>Logs</span>
-        </button>
-        <button
-          className={`nav-item ${navigation === 'known_hosts' ? 'active' : ''}`}
-          onClick={() => setNavigation('known_hosts')}
-        >
-          <UserCheck size={18} />
-          <span>Known Hosts</span>
-        </button>
-        <button
-          className={`nav-item ${navigation === 'settings' ? 'active' : ''}`}
-          onClick={openSettings}
-        >
-          <Settings size={18} />
-          <span>Settings</span>
-        </button>
-        <div className="sidebar-divider" />
+    <aside className="w-64 bg-background-sidebar border-r border-white/5 flex flex-col justify-between shrink-0 transition-all duration-300">
+      <div>
+        {/* Title Area */}
+        <div className="h-16 flex items-center px-6 border-b border-white/5">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded bg-gradient-to-br from-primary to-blue-600 flex items-center justify-center text-white font-bold text-lg shadow-lg shadow-primary/20">
+              <span className="material-icons-round text-xl">dns</span>
+            </div>
+            <span className="font-bold text-lg tracking-tight text-white">Tacoshell</span>
+          </div>
+        </div>
+
+        {/* Navigation */}
+        <nav className="mt-6 px-3 space-y-1">
+          <a className="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-primary/10 text-primary font-medium group transition-colors" href="#">
+            <span className="material-icons-round text-xl">grid_view</span>
+            Hosts
+          </a>
+          <a className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-secondary hover:bg-white/5 hover:text-white font-medium group transition-colors" href="#">
+            <span className="material-icons-round text-xl">hub</span>
+            Clusters
+          </a>
+          <a className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-secondary hover:bg-white/5 hover:text-white font-medium group transition-colors" href="#">
+            <span className="material-icons-round text-xl">folder_open</span>
+            SFTP / FTP
+          </a>
+          <a className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-secondary hover:bg-white/5 hover:text-white font-medium group transition-colors" href="#">
+            <span className="material-icons-round text-xl">key</span>
+            Keychain
+          </a>
+          <a className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-secondary hover:bg-white/5 hover:text-white font-medium group transition-colors" href="#">
+            <span className="material-icons-round text-xl">code</span>
+            Snippets
+          </a>
+        </nav>
+
+        {/* Group Labels */}
+        <div className="mt-8 px-6">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Groups</h3>
+            <button onClick={() => setShowAddDialog(true)} className="text-slate-500 hover:text-white">
+                 <span className="material-icons-round text-sm">add</span>
+            </button>
+          </div>
+          <div className="space-y-3">
+            {groups.map((group) => (
+              <button key={group.name} className="flex items-center w-full group">
+                <span className={`w-2 h-2 rounded-full ${group.color} mr-3 ${group.shadow}`}></span>
+                <span className="text-sm text-text-secondary group-hover:text-white">{group.name}</span>
+                <span className="ml-auto text-xs text-slate-600 bg-white/5 px-1.5 py-0.5 rounded">{group.count}</span>
+              </button>
+            ))}
+          </div>
+        </div>
       </div>
 
-      <div className="sidebar-content">
-        {navigation === 'hosts' && (
-          <>
-            <div className="sidebar-header">
-              <h2>Servers</h2>
-              <button onClick={() => setShowAddDialog(true)} title="Add Server">
-                <Plus size={18} />
-              </button>
-            </div>
-
-            <div className="server-list">
-              {servers.length === 0 ? (
-                <div className="empty-state">
-                  <ServerIcon size={32} />
-                  <p>No servers yet</p>
-                  <button onClick={() => setShowAddDialog(true)}>Add Server</button>
-                </div>
-              ) : (
-                servers.map((server) => (
-                  <div key={server.id} className="server-group">
-                    <div
-                      className={`server-item ${activeTabId === `server-${server.id}` ? 'active' : ''}`}
-                      onClick={() => openServerDetail(server)}
-                    >
-                      <button
-                        className={`expand-toggle ${expandedServers.has(server.id) ? 'expanded' : ''}`}
-                        onClick={(e) => toggleServerExpand(server.id, e)}
-                      >
-                        <ChevronDown size={14} />
-                      </button>
-                      <div className="server-info">
-                        <span className="server-name">{server.name}</span>
-                      </div>
-                      <div className="server-actions">
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleConnectClick(server);
-                          }}
-                          disabled={isConnecting && connectingServer?.id === server.id}
-                          title="Connect"
-                        >
-                          <Play size={14} />
-                        </button>
-                      </div>
-                    </div>
-                    {expandedServers.has(server.id) && (
-                      <div className="server-sub-items">
-                        <div className="sub-item" onClick={() => handleConnectClick(server)}>
-                          <Terminal size={12} /> Terminal
-                        </div>
-                        <div className="sub-item" onClick={() => {
-                          const tabId = `sftp-${server.id}`;
-                          const existingTab = useAppStore.getState().tabs.find(t => t.id === tabId);
-                          if (existingTab) {
-                            setActiveTab(tabId);
-                          } else {
-                            addTab({
-                              id: tabId,
-                              type: 'sftp',
-                              title: `SFTP: ${server.name}`,
-                              serverId: server.id
-                            });
-                          }
-                        }}>
-                          <FolderOpen size={12} /> SFTP
-                        </div>
-                        <div className="sub-item danger" onClick={(e) => {
-                          e.stopPropagation();
-                          handleDelete(server.id);
-                        }}>
-                          <Trash2 size={12} /> Delete
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                ))
-              )}
-            </div>
-          </>
-        )}
-
-        {navigation === 'secrets' && (
-          <div className="sidebar-placeholder">
-            <h3>Secrets</h3>
-            <p>Use the Secrets tab to manage your credentials.</p>
+      {/* Bottom Actions */}
+      <div className="p-4 border-t border-white/5">
+        <button className="flex items-center gap-3 px-3 py-2 w-full rounded-lg text-text-secondary hover:bg-white/5 hover:text-white transition-colors text-sm text-left">
+          <img
+            alt="User Avatar"
+            className="w-8 h-8 rounded-full"
+            src="https://lh3.googleusercontent.com/aida-public/AB6AXuA_0dmYfq_iOoIXuNR1OhcdvqSQoWcJpcen7bXgZilPu88tw-pFsAc72TeecFdU0FtN9hxOC2m28wPWYpq4VehJSUlG8Q6F93P-eShrUMpzJRNBvzTMbrZyDwyidcG4KHjWgi1Ji0337RcosTiI8e0GrZomj5XBwc7WGXKxqG2fWUOPqncLhvYHRmglqLWuJuP3l6nWLlcNWvMiSuLaM0_HCZZIQYARLfnso-pu8cdHcIW0PMyh1cAHmkdwZPzcZ8y9z7PwXeW8L3BV"
+          />
+          <div className="flex flex-col items-start overflow-hidden">
+            <span className="font-medium truncate w-full">Alex Doe</span>
+            <span className="text-xs text-slate-500">Pro Plan</span>
           </div>
-        )}
-
-        {navigation === 'logs' && (
-          <div className="sidebar-placeholder">
-            <h3>Logs</h3>
-            <p>Session logs will appear here.</p>
-          </div>
-        )}
-
-        {navigation === 'known_hosts' && (
-          <div className="sidebar-placeholder">
-            <h3>Known Hosts</h3>
-            <p>Manage SSH host keys.</p>
-          </div>
-        )}
+          <span className="material-icons-round ml-auto text-lg">settings</span>
+        </button>
       </div>
 
       {showAddDialog && (
@@ -347,6 +176,6 @@ export function Sidebar() {
           error={connectError}
         />
       )}
-    </div>
+    </aside>
   );
 }
