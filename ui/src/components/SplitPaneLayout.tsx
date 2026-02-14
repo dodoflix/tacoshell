@@ -188,11 +188,7 @@ function K8sPlaceholder() {
 export function SplitPaneLayout({ tabs }: SplitPaneLayoutProps) {
   const { activeTabId } = useAppStore();
 
-  // For now, show the active tab in single view
-  // Mosaic split functionality can be enabled later
-  const activeTab = tabs.find((t) => t.id === activeTabId);
-
-  if (!activeTab) {
+  if (tabs.length === 0) {
     return (
       <div className="main-content empty">
         <div className="welcome">
@@ -212,7 +208,18 @@ export function SplitPaneLayout({ tabs }: SplitPaneLayoutProps) {
 
   return (
     <div className="main-content">
-      <TileContent tabId={activeTab.id} />
+      {tabs.map((tab) => (
+        <div
+          key={tab.id}
+          style={{
+            display: tab.id === activeTabId ? 'block' : 'none',
+            height: '100%',
+            width: '100%',
+          }}
+        >
+          <TileContent tabId={tab.id} />
+        </div>
+      ))}
     </div>
   );
 }

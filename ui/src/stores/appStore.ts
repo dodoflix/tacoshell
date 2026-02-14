@@ -99,6 +99,8 @@ export const useAppStore = create<AppState>()(
       name: 'tacoshell-storage',
       partialize: (state) => ({
         sidebarOpen: state.sidebarOpen,
+        tabs: state.tabs,
+        activeTabId: state.activeTabId,
       }),
     }
   )
