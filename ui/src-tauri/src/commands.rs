@@ -337,7 +337,7 @@ pub fn connect_ssh(
 
     // Keep in blocking mode but set a short timeout for reads
     // This allows us to periodically check the stop flag
-    ssh_session.set_timeout(100); // 100ms timeout
+    ssh_session.set_timeout(10); // 10ms timeout
 
     let session_id = Uuid::new_v4();
     let session_id_str = session_id.to_string();
@@ -365,7 +365,8 @@ pub fn connect_ssh(
                 break;
             }
 
-            // Handle inputs
+            // Handle all pending inputs immediately for better responsiveness
+            let mut inputs_processed = 0;
             while let Ok(input) = input_rx.try_recv() {
                 match input {
                     SshInput::Data(data) => {
@@ -379,6 +380,11 @@ pub fn connect_ssh(
                         stop_flag.store(true, Ordering::Relaxed);
                         break;
                     }
+                }
+                inputs_processed += 1;
+                // Don't stay in input loop forever if there's a flood
+                if inputs_processed > 50 {
+                    break;
                 }
             }
 
@@ -402,16 +408,12 @@ pub fn connect_ssh(
                         break;
                     }
                 }
-                Ok(_) => {
-                    // Timeout or no data
-                }
-                Err(_) => {
-                    // Timeout or error
+                _ => {
+                    // Timeout, no data, or error
+                    // Small sleep to prevent busy-waiting if no data and no input
+                    thread::sleep(Duration::from_millis(5));
                 }
             }
-
-            // Small sleep to prevent busy-waiting
-            thread::sleep(Duration::from_millis(10));
         }
 
         // Cleanup
