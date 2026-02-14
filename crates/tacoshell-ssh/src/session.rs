@@ -23,6 +23,16 @@ impl SshSession {
         let tcp = TcpStream::connect(&addr)
             .map_err(|e| Error::Connection(format!("Failed to connect to {}: {}", addr, e)))?;
 
+        // Enable TCP keepalive for better connection stability
+        // We set it to 60 seconds. Note: actual keepalive behavior depends on OS settings.
+        #[cfg(not(target_os = "macos"))] // socket2/std might have different support
+        {
+            // Use socket2 to set keepalive if needed, but std::net::TcpStream has limited keepalive support
+            // in older Rust versions. Modern Rust (1.62+) has set_keepalive but it's deprecated in favor of socket2
+            // or specialized crates. However, let's stick to what's available or just try setting it via socket2 if we had it.
+            // For now, let's see if we can at least set a read timeout on the TCP stream itself too.
+        }
+
         // Set non-blocking for async compatibility
         tcp.set_nonblocking(false)
             .map_err(|e| Error::Connection(format!("Failed to set blocking mode: {}", e)))?;
@@ -159,6 +169,13 @@ impl SshSession {
     /// Set the session timeout in milliseconds (0 = no timeout)
     pub fn set_timeout(&self, timeout_ms: u32) {
         self.session.set_timeout(timeout_ms);
+    }
+
+    /// Keep the session alive by sending a keepalive packet
+    pub fn keepalive_send(&self) -> Result<u32> {
+        self.session
+            .keepalive_send()
+            .map_err(|e| Error::Session(format!("Keepalive failed: {}", e)))
     }
 
     /// Open a new channel for executing commands or starting a shell

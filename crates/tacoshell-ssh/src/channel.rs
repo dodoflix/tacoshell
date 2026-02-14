@@ -94,9 +94,24 @@ impl SshChannel {
 
     /// Read data from the channel (non-blocking style)
     pub fn read(&mut self, buf: &mut [u8]) -> Result<usize> {
-        self.channel
-            .read(buf)
-            .map_err(|e| Error::Session(format!("Failed to read from channel: {}", e)))
+        match self.channel.read(buf) {
+            Ok(n) => Ok(n),
+            Err(e) => {
+                let kind = e.kind();
+                let msg = e.to_string().to_lowercase();
+                
+                // Treat both WouldBlock, TimedOut, and explicit libssh2 timeout messages as non-fatal Ok(0)
+                if kind == std::io::ErrorKind::WouldBlock 
+                    || kind == std::io::ErrorKind::TimedOut
+                    || msg.contains("timed out") 
+                    || msg.contains("would block")
+                {
+                    Ok(0)
+                } else {
+                    Err(Error::Session(format!("Failed to read from channel: {}", e)))
+                }
+            }
+        }
     }
 
     /// Check if the channel has reached EOF

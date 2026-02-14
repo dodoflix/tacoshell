@@ -8,7 +8,7 @@ use std::thread;
 use std::time::Duration;
 use tacoshell_core::{AuthMethod, Protocol, Secret, SecretKind, Server, ServerSecret};
 use tacoshell_ssh::{PtyConfig, SshChannel, SshSession};
-use tauri::{AppHandle, Emitter, State};
+use tauri::{AppHandle, Emitter, Manager, State};
 use tokio::sync::mpsc;
 use uuid::Uuid;
 
@@ -337,7 +337,7 @@ pub fn connect_ssh(
 
     // Keep in blocking mode but set a short timeout for reads
     // This allows us to periodically check the stop flag
-    ssh_session.set_timeout(10); // 10ms timeout
+    ssh_session.set_timeout(100); // Increased to 100ms for more stability
 
     let session_id = Uuid::new_v4();
     let session_id_str = session_id.to_string();
@@ -352,29 +352,54 @@ pub fn connect_ssh(
 
     // Spawn background thread to read output and emit events
     let app_handle = app.clone();
+    let session_uuid = session_id;
     let session_id_for_thread = session_id_str.clone();
 
     thread::spawn(move || {
         let mut buf = vec![0u8; 8192];
         let mut ssh_channel = ssh_channel;
-        let _ssh_session = ssh_session; // Keep session alive
+        let ssh_session = ssh_session; // Keep session alive and accessible
+        let mut last_keepalive = std::time::Instant::now();
 
         loop {
             // Check if we should stop
             if stop_flag.load(Ordering::Relaxed) {
+                tracing::debug!("SSH I/O loop: Stop flag set for session {}", session_id_for_thread);
                 break;
+            }
+
+            // Send keepalive every 30 seconds
+            if last_keepalive.elapsed() > Duration::from_secs(30) {
+                if let Err(e) = ssh_session.keepalive_send() {
+                    tracing::warn!("SSH keepalive failed for session {}: {}", session_id_for_thread, e);
+                    // Usually not fatal, but good to know
+                }
+                last_keepalive = std::time::Instant::now();
             }
 
             // Handle all pending inputs immediately for better responsiveness
             let mut inputs_processed = 0;
+            let mut write_error = None;
+
             while let Ok(input) = input_rx.try_recv() {
                 match input {
                     SshInput::Data(data) => {
-                        let _ = ssh_channel.write_all(data.as_bytes());
-                        let _ = ssh_channel.flush();
+                        if let Err(e) = ssh_channel.write_all(data.as_bytes()) {
+                            tracing::error!("SSH write error for session {}: {}", session_id_for_thread, e);
+                            write_error = Some(e);
+                            break;
+                        }
+                        if let Err(e) = ssh_channel.flush() {
+                            tracing::error!("SSH flush error for session {}: {}", session_id_for_thread, e);
+                            write_error = Some(e);
+                            break;
+                        }
                     }
                     SshInput::Resize { cols, rows } => {
-                        let _ = ssh_channel.resize(cols, rows);
+                        if let Err(e) = ssh_channel.resize(cols, rows) {
+                            tracing::error!("SSH resize error for session {}: {}", session_id_for_thread, e);
+                            // Not necessarily fatal
+                        }
                     }
                     SshInput::Disconnect => {
                         stop_flag.store(true, Ordering::Relaxed);
@@ -388,7 +413,7 @@ pub fn connect_ssh(
                 }
             }
 
-            if stop_flag.load(Ordering::Relaxed) {
+            if write_error.is_some() || stop_flag.load(Ordering::Relaxed) {
                 break;
             }
 
@@ -405,18 +430,38 @@ pub fn connect_ssh(
                     }
 
                     if ssh_channel.eof() {
+                        tracing::info!("SSH channel EOF reached for session {}", session_id_for_thread);
                         break;
                     }
                 }
-                _ => {
-                    // Timeout, no data, or error
-                    // Small sleep to prevent busy-waiting if no data and no input
-                    thread::sleep(Duration::from_millis(5));
+                Ok(_) => {
+                    // Timeout or empty read
+                    // Small sleep if we didn't process much to prevent high CPU if timeouts are extremely frequent
+                    // although with 100ms timeout this is less of an issue.
+                    if inputs_processed == 0 {
+                        thread::sleep(Duration::from_millis(10));
+                    }
+                    
+                    if ssh_channel.eof() {
+                        tracing::info!("SSH channel EOF detected after timeout for session {}", session_id_for_thread);
+                        break;
+                    }
+                }
+                Err(e) => {
+                    // Fatal error
+                    tracing::error!("SSH read error for session {}: {}", session_id_for_thread, e);
+                    break;
                 }
             }
         }
 
-        // Cleanup
+        tracing::info!("SSH I/O loop finished for session {}, cleaning up", session_id_for_thread);
+
+        // Remove the session from app state so frontend knows it's gone
+        let state = app_handle.state::<AppState>();
+        let _ = state.remove_session(&session_uuid);
+
+        // Cleanup channel and notify frontend
         let _ = ssh_channel.close();
         let _ = app_handle.emit("ssh-output", SshOutputEvent {
             session_id: session_id_for_thread,
