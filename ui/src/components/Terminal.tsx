@@ -72,8 +72,10 @@ export function TerminalView({ sessionId, onDisconnect }: TerminalViewProps) {
     setTimeout(() => terminal.focus(), 150);
 
     // Listen for SSH output events from the backend
+    let isMounted = true;
     const setupListener = async () => {
-      unlistenRef.current = await listen<SshOutputEvent>('ssh-output', (event) => {
+      const unlisten = await listen<SshOutputEvent>('ssh-output', (event) => {
+        if (!isMounted) return;
         // Only process events for this session
         if (event.payload.session_id !== sessionId) return;
 
@@ -88,11 +90,18 @@ export function TerminalView({ sessionId, onDisconnect }: TerminalViewProps) {
           onDisconnect?.();
         }
       });
+
+      if (isMounted) {
+        unlistenRef.current = unlisten;
+      } else {
+        unlisten();
+      }
     };
 
     setupListener();
 
     return () => {
+      isMounted = false;
       window.removeEventListener('resize', handleResize);
       if (unlistenRef.current) {
         unlistenRef.current();
