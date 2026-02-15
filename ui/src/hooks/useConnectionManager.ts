@@ -61,7 +61,7 @@ export function useConnectionManager() {
     } catch (error: unknown) {
       console.error('Failed to connect:', error);
       let message = 'Unknown error';
-      if (error instanceof Error && typeof error.message === 'string') {
+      if (error instanceof Error) {
         message = error.message;
       } else {
         message = String(error);
