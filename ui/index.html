@@ -1,6 +1,28 @@
 <!doctype html>
-<html lang="en" class="dark">
+<html lang="en">
   <head>
+    <script>
+      (function () {
+        try {
+          var storedTheme = window.localStorage && window.localStorage.getItem('tacoshell-storage');
+          if (storedTheme) {
+            var parsed = JSON.parse(storedTheme);
+            var isDark = parsed.state && parsed.state.theme === 'dark';
+          } else {
+            var isDark = !window.matchMedia || window.matchMedia('(prefers-color-scheme: dark)').matches;
+          }
+
+          if (isDark) {
+            document.documentElement.classList.add('dark');
+          } else {
+            document.documentElement.classList.remove('dark');
+          }
+        } catch (e) {
+          // If anything goes wrong, default to dark theme
+          document.documentElement.classList.add('dark');
+        }
+      })();
+    </script>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />

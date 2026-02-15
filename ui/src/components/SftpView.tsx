@@ -148,7 +148,16 @@ export function SftpView() {
   );
 }
 
-function FileItem({ icon, iconColor, name, size = "-", date, selected = false }: any) {
+interface FileItemProps {
+  icon: string;
+  iconColor: string;
+  name: string;
+  size?: string;
+  date: string;
+  selected?: boolean;
+}
+
+function FileItem({ icon, iconColor, name, size = "-", date, selected = false }: FileItemProps) {
   return (
     <div className={`grid grid-cols-12 gap-4 px-3 py-2 rounded items-center cursor-pointer group transition-colors ${selected ? 'bg-primary/20 border border-primary/20' : 'hover:bg-slate-200 dark:hover:bg-primary/10'}`}>
       <div className="col-span-6 flex items-center gap-3 overflow-hidden">
@@ -161,7 +170,16 @@ function FileItem({ icon, iconColor, name, size = "-", date, selected = false }:
   );
 }
 
-function RemoteFileItem({ icon, iconColor, name, perms, size = "-", owner }: any) {
+interface RemoteFileItemProps {
+  icon: string;
+  iconColor: string;
+  name: string;
+  perms: string;
+  size?: string;
+  owner: string;
+}
+
+function RemoteFileItem({ icon, iconColor, name, perms, size = "-", owner }: RemoteFileItemProps) {
   return (
     <div className="grid grid-cols-12 gap-4 px-3 py-2 rounded items-center hover:bg-slate-200 dark:hover:bg-primary/10 cursor-pointer group transition-colors">
       <div className="col-span-6 flex items-center gap-3 overflow-hidden">
@@ -175,7 +193,15 @@ function RemoteFileItem({ icon, iconColor, name, perms, size = "-", owner }: any
   );
 }
 
-function TransferItem({ name, progress, icon, iconColor, waiting = false }: any) {
+interface TransferItemProps {
+  name: string;
+  progress: number;
+  icon: string;
+  iconColor: string;
+  waiting?: boolean;
+}
+
+function TransferItem({ name, progress, icon, iconColor, waiting = false }: TransferItemProps) {
   return (
     <div className="flex items-center gap-4 px-4 py-3 border-b dark:border-border-dark/50 last:border-0">
       <div className="w-8 h-8 rounded bg-panel-dark flex items-center justify-center shrink-0">

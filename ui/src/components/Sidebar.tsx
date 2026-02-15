@@ -1,8 +1,4 @@
-import { useEffect } from 'react';
 import { useAppStore } from '../stores/appStore';
-import { AddServerDialog } from './AddServerDialog';
-import { ConnectDialog } from './ConnectDialog';
-import { useConnectionManager } from '../hooks/useConnectionManager';
 
 export function Sidebar() {
   const {
@@ -11,21 +7,6 @@ export function Sidebar() {
     addTab,
     setActiveTab,
   } = useAppStore();
-
-  const {
-    showAddDialog,
-    setShowAddDialog,
-    connectingServer,
-    setConnectingServer,
-    isConnecting,
-    connectError,
-    loadServers,
-    handleConnect,
-  } = useConnectionManager();
-
-  useEffect(() => {
-    loadServers();
-  }, []);
 
   const openView = (id: string, type: 'settings' | 'terminal' | 'sftp' | 'k8s', title: string) => {
     const existingTab = useAppStore.getState().tabs.find(t => t.id === id);
@@ -37,11 +18,11 @@ export function Sidebar() {
   };
 
   const navItems = [
-    { id: 'hosts', icon: 'grid_view', label: 'Hosts', action: () => setActiveTab(null as any) }, // Setting activeTab to null shows Dashboard
+    { id: 'hosts', icon: 'grid_view', label: 'Hosts', action: () => setActiveTab(null) },
     { id: 'clusters', icon: 'hub', label: 'Clusters', action: () => openView('kubernetes', 'k8s', 'Kubernetes') },
     { id: 'sftp', icon: 'folder_open', label: 'SFTP / FTP', action: () => openView('sftp', 'sftp', 'SFTP') },
     { id: 'secrets', icon: 'key', label: 'Keychain', action: () => openView('secrets', 'settings', 'Keychain') },
-    { id: 'snippets', icon: 'code', label: 'Snippets', action: () => {} },
+    { id: 'snippets', icon: 'code', label: 'Snippets', action: () => openView('snippets', 'settings', 'Snippets'), disabled: true },
   ];
 
   return (
@@ -68,9 +49,10 @@ export function Sidebar() {
             <button
               key={item.id}
               onClick={item.action}
+              disabled={item.disabled}
               className={`flex items-center rounded-lg font-medium group transition-colors w-full ${
                 sidebarOpen ? 'gap-3 px-3 py-2.5' : 'justify-center py-3'
-              } text-text-secondary hover:bg-white/5 hover:text-white relative`}
+              } ${item.disabled ? 'text-slate-600 cursor-not-allowed opacity-50' : 'text-text-secondary hover:bg-white/5 hover:text-white'} relative`}
             >
               <span className="material-icons-round text-xl">{item.icon}</span>
               {sidebarOpen ? (
@@ -106,23 +88,6 @@ export function Sidebar() {
             </div>
           )}
 
-          <div className={`my-4 border-t border-white/5 mx-2`} />
-
-          <button
-            onClick={() => setShowAddDialog(true)}
-            className={`flex items-center rounded-lg font-medium group transition-colors w-full ${
-              sidebarOpen ? 'gap-3 px-3 py-2.5' : 'justify-center py-3'
-            } text-text-secondary hover:bg-white/5 hover:text-white relative`}
-          >
-            <span className="material-icons-round text-xl">add</span>
-            {sidebarOpen ? (
-              <span>New Connection</span>
-            ) : (
-              <span className="absolute left-14 bg-gray-900 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-50 shadow-xl border border-white/10">
-                New Connection
-              </span>
-            )}
-          </button>
         </nav>
       </div>
 
@@ -136,11 +101,30 @@ export function Sidebar() {
         >
           {sidebarOpen ? (
             <>
-              <img
-                src="https://lh3.googleusercontent.com/aida-public/AB6AXuA_0dmYfq_iOoIXuNR1OhcdvqSQoWcJpcen7bXgZilPu88tw-pFsAc72TeecFdU0FtN9hxOC2m28wPWYpq4VehJSUlG8Q6F93P-eShrUMpzJRNBvzTMbrZyDwyidcG4KHjWgi1Ji0337RcosTiI8e0GrZomj5XBwc7WGXKxqG2fWUOPqncLhvYHRmglqLWuJuP3l6nWLlcNWvMiSuLaM0_HCZZIQYARLfnso-pu8cdHcIW0PMyh1cAHmkdwZPzcZ8y9z7PwXeW8L3BV"
-                alt="User"
+              <svg
                 className="w-8 h-8 rounded-full"
-              />
+                viewBox="0 0 64 64"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <defs>
+                  <linearGradient id="avatar-bg" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stopColor="#3b82f6"/>
+                    <stop offset="100%" stopColor="#6b21a8"/>
+                  </linearGradient>
+                </defs>
+                <circle cx="32" cy="32" r="32" fill="url(#avatar-bg)"/>
+                <text
+                  x="50%"
+                  y="52%"
+                  textAnchor="middle"
+                  dominantBaseline="middle"
+                  fontFamily="system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif"
+                  fontSize="28"
+                  fill="white"
+                >
+                  A
+                </text>
+              </svg>
               <div className="flex flex-col items-start overflow-hidden">
                 <span className="font-medium truncate w-full text-left">Alex Doe</span>
                 <span className="text-xs text-slate-500">Pro Plan</span>
@@ -152,23 +136,6 @@ export function Sidebar() {
           )}
         </button>
       </div>
-
-      {showAddDialog && (
-        <AddServerDialog
-          onClose={() => setShowAddDialog(false)}
-          onAdded={loadServers}
-        />
-      )}
-
-      {connectingServer && (
-        <ConnectDialog
-          server={connectingServer}
-          onConnect={handleConnect}
-          onCancel={() => setConnectingServer(null)}
-          loading={isConnecting}
-          error={connectError}
-        />
-      )}
     </aside>
   );
 }
