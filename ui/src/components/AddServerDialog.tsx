@@ -1,7 +1,6 @@
-// Add Server Dialog
+// Add Server Dialog refactored with Tailwind
 
 import { useState } from 'react';
-import { X } from 'lucide-react';
 import { createServer } from '../hooks/useTauri';
 
 interface AddServerDialogProps {
@@ -39,72 +38,85 @@ export function AddServerDialog({ onClose, onAdded }: AddServerDialogProps) {
   };
 
   return (
-    <div className="dialog-overlay" onClick={onClose}>
-      <div className="dialog" onClick={(e) => e.stopPropagation()}>
-        <div className="dialog-header">
-          <h3>Add Server</h3>
-          <button onClick={onClose}>
-            <X size={18} />
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[1000] p-4" onClick={onClose}>
+      <div className="bg-background-card border border-white/10 rounded-2xl p-6 w-full max-w-md shadow-2xl shadow-black/50" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-xl font-bold text-white">New Connection</h2>
+          <button onClick={onClose} className="p-1 hover:bg-white/5 rounded-lg text-slate-500 hover:text-white transition-colors">
+            <span className="material-icons-round">close</span>
           </button>
         </div>
 
-        <form onSubmit={handleSubmit}>
-          <div className="form-group">
-            <label htmlFor="name">Name (optional)</label>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="space-y-1.5">
+            <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider pl-1">Name (optional)</label>
             <input
-              id="name"
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="My Server"
+              className="w-full bg-background-dark/50 border border-white/10 rounded-lg px-4 py-2.5 text-slate-200 placeholder-slate-600 focus:outline-none focus:border-primary transition-all"
+              placeholder="e.g. Production Web"
             />
           </div>
 
-          <div className="form-group">
-            <label htmlFor="host">Host *</label>
+          <div className="space-y-1.5">
+            <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider pl-1">Host or IP Address</label>
             <input
-              id="host"
               type="text"
               value={host}
               onChange={(e) => setHost(e.target.value)}
+              className="w-full bg-background-dark/50 border border-white/10 rounded-lg px-4 py-2.5 text-slate-200 placeholder-slate-600 focus:outline-none focus:border-primary transition-all"
               placeholder="192.168.1.1 or example.com"
               required
             />
           </div>
 
-          <div className="form-row">
-            <div className="form-group">
-              <label htmlFor="port">Port</label>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider pl-1">Port</label>
               <input
-                id="port"
                 type="number"
                 value={port}
                 onChange={(e) => setPort(e.target.value)}
+                className="w-full bg-background-dark/50 border border-white/10 rounded-lg px-4 py-2.5 text-slate-200 focus:outline-none focus:border-primary transition-all"
                 min="1"
                 max="65535"
               />
             </div>
 
-            <div className="form-group">
-              <label htmlFor="username">Username</label>
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider pl-1">Username</label>
               <input
-                id="username"
                 type="text"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
+                className="w-full bg-background-dark/50 border border-white/10 rounded-lg px-4 py-2.5 text-slate-200 placeholder-slate-600 focus:outline-none focus:border-primary transition-all"
                 placeholder="root"
               />
             </div>
           </div>
 
-          {error && <div className="form-error">{error}</div>}
+          {error && (
+            <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-3 text-red-400 text-xs flex items-start gap-2">
+              <span className="material-icons-round text-sm">error</span>
+              {error}
+            </div>
+          )}
 
-          <div className="dialog-footer">
-            <button type="button" onClick={onClose} className="btn-secondary">
+          <div className="flex justify-end gap-3 pt-4">
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-5 py-2.5 rounded-lg text-sm font-medium text-slate-400 hover:text-white hover:bg-white/5 transition-all"
+            >
               Cancel
             </button>
-            <button type="submit" disabled={loading || !host} className="btn-primary">
-              {loading ? 'Adding...' : 'Add Server'}
+            <button
+              type="submit"
+              disabled={loading || !host}
+              className="bg-primary hover:bg-primary-hover disabled:opacity-50 text-white px-6 py-2.5 rounded-lg text-sm font-semibold transition-all shadow-lg shadow-primary/20 active:scale-95"
+            >
+              {loading ? 'Creating...' : 'Create Host'}
             </button>
           </div>
         </form>
@@ -112,4 +124,3 @@ export function AddServerDialog({ onClose, onAdded }: AddServerDialogProps) {
     </div>
   );
 }
-

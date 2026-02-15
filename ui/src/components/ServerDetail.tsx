@@ -1,6 +1,6 @@
-// Server detail view
+// Server detail view refactored with Tailwind
+
 import { useState, useEffect } from 'react';
-import { Server as ServerIcon, Save, Play, FolderOpen } from 'lucide-react';
 import { useAppStore } from '../stores/appStore';
 import {
   updateServer,
@@ -15,7 +15,7 @@ interface ServerDetailProps {
 }
 
 export function ServerDetail({ serverId }: ServerDetailProps) {
-  const { servers, setServers, addTab, addSession, setActiveTab } = useAppStore();
+  const { servers, setServers, addTab, addSession } = useAppStore();
   const server = servers.find((s) => s.id === serverId);
 
   const [name, setName] = useState(server?.name || '');
@@ -44,8 +44,6 @@ export function ServerDetail({ serverId }: ServerDetailProps) {
     try {
       const secrets = await fetchSecrets();
       setAllSecrets(secrets);
-      // In a real app, we'd fetch the specifically linked secret from backend
-      // For now, this is a placeholder for that logic
     } catch (err) {
       console.error(err);
     }
@@ -67,7 +65,6 @@ export function ServerDetail({ serverId }: ServerDetailProps) {
       };
 
       await updateServer(updated);
-      // Update local store
       setServers(servers.map(s => s.id === serverId ? updated : s));
       setMessage({ type: 'success', text: 'Server updated successfully' });
 
@@ -103,90 +100,120 @@ export function ServerDetail({ serverId }: ServerDetailProps) {
   };
 
   if (!server) {
-    return <div className="tile-empty">Server not found</div>;
+    return <div className="flex items-center justify-center h-full text-slate-500">Server not found</div>;
   }
 
   return (
-    <div className="settings-panel">
-      <div className="detail-header">
-        <h2><ServerIcon size={24} /> {server.name}</h2>
-      </div>
-
-      <div className="tab-actions-bar">
-        <button onClick={handleConnect} className="btn-primary">
-          <Play size={16} /> Terminal
-        </button>
-        <button onClick={() => {
-           const tabId = `sftp-${server.id}`;
-           const existingTab = useAppStore.getState().tabs.find(t => t.id === tabId);
-           if (existingTab) {
-             setActiveTab(tabId);
-           } else {
-             addTab({
-               id: tabId,
-               type: 'sftp',
-               title: `SFTP: ${server.name}`,
-               serverId: server.id
-             });
-           }
-        }} className="btn-secondary">
-          <FolderOpen size={16} /> SFTP
-        </button>
-      </div>
-
-      <section className="settings-section">
-        <h3>General Settings</h3>
-        <div className="form-grid">
-          <div className="form-group">
-            <label>Display Name</label>
-            <input type="text" value={name} onChange={(e) => setName(e.target.value)} />
+    <div className="p-8 max-w-4xl mx-auto h-full overflow-y-auto font-display">
+      <div className="flex items-center justify-between mb-8">
+        <div className="flex items-center gap-4">
+          <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center text-primary border border-primary/20">
+            <span className="material-icons-round text-2xl">dns</span>
           </div>
-          <div className="form-group">
-            <label>Host / IP</label>
-            <input type="text" value={host} onChange={(e) => setHost(e.target.value)} />
-          </div>
-          <div className="form-group">
-            <label>Port</label>
-            <input type="number" value={port} onChange={(e) => setPort(parseInt(e.target.value))} />
-          </div>
-          <div className="form-group">
-            <label>Username</label>
-            <input type="text" value={username} onChange={(e) => setUsername(e.target.value)} />
+          <div>
+            <h2 className="text-2xl font-bold text-white">{server.name}</h2>
+            <p className="text-sm text-slate-500 font-mono">{server.username}@{server.host}:{server.port}</p>
           </div>
         </div>
-      </section>
-
-      <section className="settings-section">
-        <h3>Authentication</h3>
-        <div className="form-group">
-          <label>Linked Secret</label>
-          <select
-            value={linkedSecretId || ''}
-            onChange={(e) => setLinkedSecretId(e.target.value || null)}
+        <div className="flex gap-3">
+          <button
+            onClick={handleConnect}
+            className="bg-primary hover:bg-primary-hover text-white px-5 py-2 rounded-lg text-sm font-semibold flex items-center gap-2 shadow-lg shadow-primary/20 transition-all active:scale-95"
           >
-            <option value="">None (Use Agent / Temporary)</option>
-            {allSecrets.map(s => (
-              <option key={s.id} value={s.id}>{s.name} ({s.kind})</option>
-            ))}
-          </select>
-          <p className="hint">The selected secret will be used for automatic login.</p>
+            <span className="material-icons-round text-lg">terminal</span>
+            Connect
+          </button>
         </div>
-      </section>
+      </div>
 
-      {message && (
-        <div className={`message ${message.type}`}>
-          {message.text}
+      <div className="grid grid-cols-1 gap-6">
+        <section className="bg-background-card p-6 rounded-2xl border border-white/5 space-y-6">
+          <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wider pl-1">General Settings</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="space-y-1.5">
+              <label className="text-sm text-slate-400 pl-1">Display Name</label>
+              <input
+                type="text"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                className="w-full bg-background-dark border border-white/10 rounded-lg px-4 py-2.5 text-slate-200 focus:outline-none focus:border-primary transition-all"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-sm text-slate-400 pl-1">Host / IP</label>
+              <input
+                type="text"
+                value={host}
+                onChange={(e) => setHost(e.target.value)}
+                className="w-full bg-background-dark border border-white/10 rounded-lg px-4 py-2.5 text-slate-200 focus:outline-none focus:border-primary transition-all font-mono"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-sm text-slate-400 pl-1">Port</label>
+              <input
+                type="number"
+                value={port}
+                onChange={(e) => setPort(parseInt(e.target.value))}
+                className="w-full bg-background-dark border border-white/10 rounded-lg px-4 py-2.5 text-slate-200 focus:outline-none focus:border-primary transition-all"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-sm text-slate-400 pl-1">Username</label>
+              <input
+                type="text"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                className="w-full bg-background-dark border border-white/10 rounded-lg px-4 py-2.5 text-slate-200 focus:outline-none focus:border-primary transition-all"
+              />
+            </div>
+          </div>
+        </section>
+
+        <section className="bg-background-card p-6 rounded-2xl border border-white/5 space-y-4">
+          <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wider pl-1">Authentication</h3>
+          <div className="space-y-1.5">
+            <label className="text-sm text-slate-400 pl-1">Linked Secret</label>
+            <select
+              value={linkedSecretId || ''}
+              onChange={(e) => setLinkedSecretId(e.target.value || null)}
+              className="w-full bg-background-dark border border-white/10 rounded-lg px-4 py-2.5 text-slate-200 focus:outline-none focus:border-primary transition-all appearance-none"
+            >
+              <option value="">None (Use Agent / Temporary)</option>
+              {allSecrets.map(s => (
+                <option key={s.id} value={s.id}>{s.name} ({s.kind})</option>
+              ))}
+            </select>
+            <p className="text-xs text-slate-500 pl-1 pt-1">The selected secret will be used for automatic login.</p>
+          </div>
+        </section>
+
+        {message && (
+          <div className={`p-4 rounded-xl flex items-center gap-3 border ${
+            message.type === 'success'
+              ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400'
+              : 'bg-red-500/10 border-red-500/20 text-red-400'
+          }`}>
+            <span className="material-icons-round text-lg">
+              {message.type === 'success' ? 'check_circle' : 'error'}
+            </span>
+            <span className="text-sm font-medium">{message.text}</span>
+          </div>
+        )}
+
+        <div className="pt-4 flex justify-end">
+          <button
+            onClick={handleSave}
+            disabled={loading}
+            className="bg-white/5 hover:bg-white/10 text-white px-8 py-3 rounded-xl text-sm font-bold transition-all border border-white/10 flex items-center gap-2"
+          >
+            {loading ? (
+              <span className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin"></span>
+            ) : (
+              <span className="material-icons-round text-lg">save</span>
+            )}
+            Save Configuration
+          </button>
         </div>
-      )}
-
-      <div className="detail-footer">
-        <button
-          onClick={handleSave}
-          disabled={loading}
-          className="btn-primary"
-        >
-          <Save size={18} /> {loading ? 'Saving...' : 'Save Changes'}
-        </button>
       </div>
     </div>
   );
