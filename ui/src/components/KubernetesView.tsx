@@ -41,7 +41,22 @@ export function KubernetesView() {
                 <span className="material-icons-round">{expanded ? 'expand_more' : 'chevron_right'}</span>
               </button>
               <div className="w-10 h-10 rounded bg-blue-500/10 flex items-center justify-center">
-                <img alt="K8s Logo" className="w-6 h-6" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAOftSAMLOXyVP11m4bthx4DZ7rjC8WerATQpWGrf5KsVykGirfgrw8dRSh6q0VqIUNNAts4AaOlSz5y7AuxFX32dlbwkIWn5kOM1DgR-zy2VPdLIyc6z_JctG1jnk7vhz2nzbw4kT3t7KUjfygnXTP0qbLNZysU7grVUFAMJzza8H4bdJ27e7EPnlBv8nwJjWnjeEX0bm1AQ3HeFjPq2vJ3sMSw62xigmBhBvxD-RN1NfSKLVEHgEmfFdA54LJczsTCuWssI5NpFxA" />
+                <svg
+                  className="w-6 h-6"
+                  viewBox="0 0 256 256"
+                  role="img"
+                  aria-label="Kubernetes logo"
+                >
+                  <circle cx="128" cy="128" r="128" fill="#326CE5" />
+                  <path
+                    fill="#FFFFFF"
+                    d="M206.7 105.7a10.2 10.2 0 0 0-5.7-6.9l-63.4-28.2a10.5 10.5 0 0 0-8.7 0L65.5 98.8a10.2 10.2 0 0 0-5.7 6.9L49 155.5a10.5 10.5 0 0 0 2.9 9.3l47 47a10.7 10.7 0 0 0 9.3 2.9l57.8-10.8a10.2 10.2 0 0 0 6.9-5.7l28.2-63.4a10.5 10.5 0 0 0-0.4-9.1Z"
+                  />
+                  <path
+                    fill="#326CE5"
+                    d="M128 96.4a7.8 7.8 0 0 0-7.8 7.8v16.3a24.2 24.2 0 0 0-11.2 6.5l-14.5-8.4a7.8 7.8 0 1 0-7.8 13.5l14.5 8.4a24 24 0 0 0 0 13l-14.5 8.4a7.8 7.8 0 1 0 7.8 13.5l14.5-8.4a24.2 24.2 0 0 0 11.2 6.5v16.3a7.8 7.8 0 1 0 15.6 0v-16.3a24.2 24.2 0 0 0 11.2-6.5l14.5 8.4a7.8 7.8 0 1 0 7.8-13.5l-14.5-8.4a24 24 0 0 0 0-13l14.5-8.4a7.8 7.8 0 1 0-7.8-13.5l-14.5 8.4a24.2 24.2 0 0 0-11.2-6.5v-16.3A7.8 7.8 0 0 0 128 96.4Zm0 31.2a16.4 16.4 0 1 1-16.4 16.4A16.4 16.4 0 0 1 128 127.6Z"
+                  />
+                </svg>
               </div>
               <div>
                 <h3 className="font-semibold text-slate-800 dark:text-white">production-us-east-1</h3>
@@ -106,9 +121,9 @@ export function KubernetesView() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-200 dark:divide-slate-700/50 text-sm">
-                    <PodRow name="frontend-app-deployment-7d8" status="Running" statusColor="text-emerald-500" restarts="0" age="2d 4h" />
-                    <PodRow name="redis-master-0" status="Running" statusColor="text-emerald-500" restarts="1" age="14d" />
-                    <PodRow name="payment-service-worker-x92" status="CrashLoopBackOff" statusColor="text-red-500" restarts="14" age="4m 12s" error />
+                    <PodRow name="frontend-app-deployment-7d8" status="Running" restarts="0" age="2d 4h" />
+                    <PodRow name="redis-master-0" status="Running" restarts="1" age="14d" />
+                    <PodRow name="payment-service-worker-x92" status="CrashLoopBackOff" restarts="14" age="4m 12s" error />
                   </tbody>
                 </table>
               </div>
@@ -146,7 +161,35 @@ export function KubernetesView() {
   );
 }
 
-function PodRow({ name, status, statusColor, restarts, age, error = false }: any) {
+interface PodRowProps {
+  name: string;
+  status: string;
+  restarts: string;
+  age: string;
+  error?: boolean;
+}
+
+function PodRow({ name, status, restarts, age, error = false }: PodRowProps) {
+  // Map status to colors - using full class names to ensure Tailwind generates them
+  const getStatusClasses = (isError: boolean) => {
+    if (isError) {
+      return {
+        bg: 'bg-red-500/10',
+        text: 'text-red-500',
+        border: 'border-red-500/20',
+      };
+    }
+    
+    // For Running status
+    return {
+      bg: 'bg-emerald-500/10',
+      text: 'text-emerald-500',
+      border: 'border-emerald-500/20',
+    };
+  };
+
+  const statusClasses = getStatusClasses(error);
+
   return (
     <tr className={`group hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors ${error ? 'bg-red-500/5' : ''}`}>
       <td className="px-6 py-3 font-medium text-slate-700 dark:text-slate-200 flex items-center gap-3">
@@ -154,7 +197,7 @@ function PodRow({ name, status, statusColor, restarts, age, error = false }: any
         {name}
       </td>
       <td className="px-6 py-3">
-        <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${statusColor}/10 ${statusColor} border border-${statusColor}/20`}>
+        <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${statusClasses.bg} ${statusClasses.text} border ${statusClasses.border}`}>
           {status}
         </span>
       </td>
@@ -170,7 +213,18 @@ function PodRow({ name, status, statusColor, restarts, age, error = false }: any
   );
 }
 
-function CollapsedCluster({ name, version, nodes, provider, status, statusColor, textColor, offline = false }: any) {
+interface CollapsedClusterProps {
+  name: string;
+  version: string;
+  nodes: string;
+  provider: string;
+  status: string;
+  statusColor: string;
+  textColor: string;
+  offline?: boolean;
+}
+
+function CollapsedCluster({ name, version, nodes, provider, status, statusColor, textColor, offline = false }: CollapsedClusterProps) {
   return (
     <div className={`bg-white dark:bg-background-card rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm hover:border-slate-300 dark:hover:border-slate-600 transition-colors ${offline ? 'opacity-75' : ''}`}>
       <div className="p-4 flex items-center justify-between cursor-pointer">

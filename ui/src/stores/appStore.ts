@@ -32,7 +32,7 @@ interface AppState {
 
   addTab: (tab: Tab) => void;
   removeTab: (id: string) => void;
-  setActiveTab: (id: string) => void;
+  setActiveTab: (id: string | null) => void;
 
   toggleSidebar: () => void;
   setTheme: (theme: 'dark' | 'light') => void;
@@ -107,7 +107,7 @@ export const useAppStore = create<AppState>()(
 
         return { tabs: newTabs, activeTabId };
       }),
-      setActiveTab: (id) => set({ activeTabId: id }),
+      setActiveTab: (id: string | null) => set({ activeTabId: id }),
 
       // UI actions
       toggleSidebar: () => set((state) => ({ sidebarOpen: !state.sidebarOpen })),

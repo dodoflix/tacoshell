@@ -45,18 +45,20 @@ function TileContent({ tabId }: { tabId: string }) {
 
 export function SettingsPanel() {
   const { theme, setTheme, fontSize, setFontSize, fontFamily, setFontFamily } = useAppStore();
-  const [activeSection, setActiveSection] = useState<'general' | 'about'>('general');
+  const sections = ['general', 'about'] as const;
+  type SettingsSection = (typeof sections)[number];
+  const [activeSection, setActiveSection] = useState<SettingsSection>('general');
 
   return (
     <div className="p-8 max-w-4xl mx-auto h-full overflow-y-auto">
       <h2 className="text-2xl font-bold mb-6 text-white text-left">Settings</h2>
 
       <div className="flex gap-4 mb-8 border-b border-white/5">
-        {['general', 'about'].map((section) => (
+        {sections.map((section) => (
           <button
             key={section}
             className={`pb-2 px-4 capitalize transition-colors ${activeSection === section ? 'text-primary border-b-2 border-primary' : 'text-slate-500 hover:text-slate-300'}`}
-            onClick={() => setActiveSection(section as any)}
+            onClick={() => setActiveSection(section)}
           >
             {section}
           </button>

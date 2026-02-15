@@ -58,9 +58,15 @@ export function useConnectionManager() {
       });
 
       setConnectingServer(null);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Failed to connect:', error);
-      setConnectError(error.message || String(error));
+      let message = 'Unknown error';
+      if (error instanceof Error) {
+        message = error.message;
+      } else {
+        message = String(error);
+      }
+      setConnectError(message);
     } finally {
       setIsConnecting(false);
     }
