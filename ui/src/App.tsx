@@ -2,7 +2,7 @@ import { useEffect } from "react";
 import { useAppStore } from "./stores/appStore";
 import { Sidebar } from "./components/Sidebar";
 import { TabBar } from "./components/TabBar";
-import { MainContent } from "./components/MainContent";
+import { ViewManager } from "./components/ViewManager";
 
 function App() {
   const { theme } = useAppStore();
@@ -20,7 +20,7 @@ function App() {
       <Sidebar />
       <div className="flex-1 flex flex-col min-w-0 h-full overflow-hidden">
         <TabBar />
-        <MainContent />
+        <ViewManager />
       </div>
     </div>
   );

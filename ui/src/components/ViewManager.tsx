@@ -1,25 +1,22 @@
-// Split pane layout refactored as Dashboard / Main Content area
+// View manager that handles Dashboard and individual tab views
 
 import { useState } from 'react';
 import { useAppStore } from '../stores/appStore';
 import { TerminalView } from './Terminal';
 import { SecretsManager } from './SecretsManager';
 import { ServerDetail } from './ServerDetail';
+import { SftpView } from './SftpView';
+import { KubernetesView } from './KubernetesView';
 import { AddServerDialog } from './AddServerDialog';
 import { ConnectDialog } from './ConnectDialog';
-import { connectSsh, fetchServers } from '../hooks/useTauri';
-import type { Tab, Server as ServerType } from '../types';
-
-interface SplitPaneLayoutProps {
-  tabs: Tab[];
-}
+import { useConnectionManager } from '../hooks/useConnectionManager';
 
 function TileContent({ tabId }: { tabId: string }) {
   const { tabs } = useAppStore();
   const tab = tabs.find((t) => t.id === tabId);
 
   if (!tab) {
-    return <div className="tile-empty">Tab not found</div>;
+    return <div className="flex items-center justify-center h-full text-slate-500">Tab not found</div>;
   }
 
   switch (tab.type) {
@@ -27,7 +24,7 @@ function TileContent({ tabId }: { tabId: string }) {
       return tab.sessionId ? (
         <TerminalView sessionId={tab.sessionId} />
       ) : (
-        <div className="tile-empty">No session</div>
+        <div className="flex items-center justify-center h-full text-slate-500">No session</div>
       );
     case 'settings':
       if (tab.id === 'secrets') {
@@ -37,8 +34,12 @@ function TileContent({ tabId }: { tabId: string }) {
         return <ServerDetail serverId={tab.serverId} />;
       }
       return <SettingsPanel />;
+    case 'sftp':
+      return <SftpView />;
+    case 'k8s':
+      return <KubernetesView />;
     default:
-      return <div className="tile-empty">Unknown tab type</div>;
+      return <div className="flex items-center justify-center h-full text-slate-500">Unknown tab type</div>;
   }
 }
 
@@ -63,9 +64,9 @@ export function SettingsPanel() {
       </div>
 
       {activeSection === 'general' && (
-        <div className="space-y-8">
+        <div className="space-y-8 text-left">
           <section className="bg-background-card p-6 rounded-xl border border-white/5">
-            <h3 className="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-4 text-left">Appearance</h3>
+            <h3 className="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-4">Appearance</h3>
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <label className="text-slate-300">Theme</label>
@@ -107,89 +108,44 @@ export function SettingsPanel() {
       )}
 
       {activeSection === 'about' && (
-        <div className="bg-background-card p-6 rounded-xl border border-white/5">
-           <h3 className="text-lg font-bold mb-2 text-white text-left">Tacoshell v0.1.0</h3>
-           <p className="text-slate-400 text-left">Unified Infrastructure Management GUI. Built with Rust + Tauri + React.</p>
+        <div className="bg-background-card p-6 rounded-xl border border-white/5 text-left">
+           <h3 className="text-lg font-bold mb-2 text-white">Tacoshell v0.1.0</h3>
+           <p className="text-slate-400">Unified Infrastructure Management GUI. Built with Rust + Tauri + React.</p>
         </div>
       )}
     </div>
   );
 }
 
-export function SplitPaneLayout({ tabs }: SplitPaneLayoutProps) {
-  const { activeTabId, servers, addSession, addTab, setServers, setActiveTab } = useAppStore();
-  const [showAddDialog, setShowAddDialog] = useState(false);
-  const [connectingServer, setConnectingServer] = useState<ServerType | null>(null);
-  const [isConnecting, setIsConnecting] = useState(false);
-  const [connectError, setConnectError] = useState<string | null>(null);
-
-  const loadServers = async () => {
-     try {
-      const data = await fetchServers();
-      setServers(data);
-    } catch (error) {
-      console.error('Failed to load servers:', error);
-    }
-  };
-
-  const handleConnectClick = (server: ServerType) => {
-    setConnectingServer(server);
-    setConnectError(null);
-  };
-
-  const handleConnect = async (password?: string, privateKey?: string, passphrase?: string) => {
-    if (!connectingServer) return;
-
-    setIsConnecting(true);
-    setConnectError(null);
-
-    try {
-      const session = await connectSsh({
-        server_id: connectingServer.id,
-        password,
-        private_key: privateKey,
-        passphrase,
-      });
-
-      addSession({
-        sessionId: session.session_id,
-        serverId: connectingServer.id,
-        connected: true,
-      });
-
-      addTab({
-        id: `terminal-${session.session_id}`,
-        type: 'terminal',
-        title: connectingServer.name,
-        serverId: connectingServer.id,
-        sessionId: session.session_id,
-      });
-
-      setConnectingServer(null);
-    } catch (error: any) {
-      setConnectError(error.message || String(error));
-    } finally {
-      setIsConnecting(false);
-    }
-  };
-
-  if (!activeTabId && tabs.length > 0) {
-      // Logic for selecting a tab if dashboard is not wanted could be here
-  }
+export function ViewManager() {
+  const { tabs, activeTabId, servers, addTab, setActiveTab } = useAppStore();
+  const {
+    showAddDialog,
+    setShowAddDialog,
+    connectingServer,
+    setConnectingServer,
+    isConnecting,
+    connectError,
+    loadServers,
+    handleConnect,
+  } = useConnectionManager();
 
   if (!activeTabId) {
     return (
       <main className="flex-1 flex flex-col h-full overflow-hidden bg-background-dark relative">
         {/* Top Header */}
-        <header className="h-16 px-6 flex items-center justify-between border-b border-white/5 bg-background-dark/80 backdrop-blur-md sticky top-0 z-20">
+        <header className="h-16 px-6 flex items-center justify-between border-b border-white/5 bg-background-dark/80 backdrop-blur-md sticky top-0 z-20 shrink-0">
           {/* Search */}
           <div className="flex-1 max-w-2xl relative group">
             <span className="material-icons-round absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-primary transition-colors">search</span>
             <input
               className="w-full bg-background-card border border-white/10 text-sm rounded-lg pl-10 pr-4 py-2 text-slate-300 placeholder-slate-500 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all"
-              placeholder="Search hosts..."
+              placeholder="Search hosts, IPs, or tags... (Cmd+K)"
               type="text"
             />
+            <div className="absolute right-3 top-1/2 -translate-y-1/2 flex gap-1">
+              <kbd className="hidden sm:inline-block px-1.5 py-0.5 text-xs text-slate-500 bg-white/5 border border-white/10 rounded font-mono">⌘K</kbd>
+            </div>
           </div>
           {/* Actions */}
           <div className="flex items-center gap-3 ml-6">
@@ -213,13 +169,19 @@ export function SplitPaneLayout({ tabs }: SplitPaneLayoutProps) {
             <div className="flex items-center gap-1 bg-background-card p-1 rounded-lg border border-white/5 inline-flex w-fit">
               <button className="px-3 py-1.5 text-sm font-medium rounded text-white bg-white/10 shadow-sm">All Hosts</button>
               <button className="px-3 py-1.5 text-sm font-medium rounded text-slate-400 hover:text-white hover:bg-white/5 transition-colors">Recent</button>
+              <button className="px-3 py-1.5 text-sm font-medium rounded text-slate-400 hover:text-white hover:bg-white/5 transition-colors">Favorites</button>
             </div>
             <div className="flex items-center gap-3">
               <span className="text-sm text-slate-500">Sort by:</span>
               <select className="bg-transparent text-sm text-slate-300 border-none focus:ring-0 cursor-pointer p-0 font-medium outline-none">
+                <option>Status</option>
                 <option>Name</option>
                 <option>Date Added</option>
               </select>
+              <div className="flex bg-background-card rounded border border-white/5 ml-2">
+                <button className="p-1.5 text-white bg-white/10 rounded-l"><span className="material-icons-round text-lg">grid_view</span></button>
+                <button className="p-1.5 text-slate-500 hover:text-white rounded-r"><span className="material-icons-round text-lg">view_list</span></button>
+              </div>
             </div>
           </div>
 
@@ -228,15 +190,15 @@ export function SplitPaneLayout({ tabs }: SplitPaneLayoutProps) {
             {servers.map((server) => (
               <div
                 key={server.id}
-                onClick={() => handleConnectClick(server)}
-                className="group bg-background-card rounded-xl p-4 border border-white/5 hover:border-primary/50 transition-all duration-300 relative card-hover cursor-pointer"
+                onClick={() => setConnectingServer(server)}
+                className="group bg-background-card rounded-xl p-4 border border-white/5 hover:border-primary/50 transition-all duration-300 relative cursor-pointer"
               >
                 <div className="flex justify-between items-start mb-3">
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center border border-primary/20">
                       <span className="material-icons-round text-primary">terminal</span>
                     </div>
-                    <div>
+                    <div className="text-left">
                       <h3 className="font-semibold text-white group-hover:text-primary transition-colors">{server.name}</h3>
                       <p className="text-xs text-slate-500 flex items-center gap-1">
                         <span className="w-1.5 h-1.5 rounded-full bg-slate-500"></span>
@@ -277,10 +239,24 @@ export function SplitPaneLayout({ tabs }: SplitPaneLayoutProps) {
               <span className="text-sm font-medium text-slate-400 group-hover:text-white transition-colors">Add New Host</span>
             </button>
           </div>
+
+          {/* Bottom Section / Info */}
+          <div className="mt-8 mb-6 rounded-lg bg-gradient-to-r from-primary/20 to-transparent p-6 border border-primary/20 flex items-start sm:items-center justify-between gap-4">
+            <div className="flex items-start gap-4 text-left">
+              <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center shrink-0">
+                <span className="material-icons-round text-primary">tips_and_updates</span>
+              </div>
+              <div>
+                <h4 className="text-white font-semibold">Pro Tip: Port Forwarding</h4>
+                <p className="text-sm text-slate-400 mt-1 max-w-xl">You can now set up local port forwarding rules directly from the host context menu. Right-click any active connection to start.</p>
+              </div>
+            </div>
+            <button className="text-sm font-medium text-white bg-primary hover:bg-primary-hover px-4 py-2 rounded-lg transition-colors whitespace-nowrap">Try it now</button>
+          </div>
         </div>
 
         {/* Status Bar */}
-        <footer className="h-8 bg-background-dark border-t border-white/5 flex items-center px-4 justify-between text-[11px] text-slate-500 select-none">
+        <footer className="h-8 bg-background-dark border-t border-white/5 flex items-center px-4 justify-between text-[11px] text-slate-500 select-none shrink-0">
           <div className="flex items-center gap-4">
             <span className="flex items-center gap-1.5 hover:text-slate-300 cursor-pointer transition-colors">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
@@ -331,5 +307,3 @@ export function SplitPaneLayout({ tabs }: SplitPaneLayoutProps) {
     </div>
   );
 }
-
-export default SplitPaneLayout;
