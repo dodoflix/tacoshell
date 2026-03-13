@@ -83,16 +83,16 @@ Legend: `[ ]` = not started · `[~]` = in progress · `[x]` = done
 
 ### 1.8 Vault Store (`packages/ui/src/stores/useVaultStore.ts`)
 
-- [ ] Write failing tests for `useVaultStore`
-- [ ] Implement `useVaultStore` (load, sync, offline mode, item CRUD)
+- [x] Write failing tests for `useVaultStore`
+- [x] Implement `useVaultStore` (load, sync, offline mode, item CRUD)
 
 ### 1.9 Desktop Shell (`packages/tauri-app/`)
 
-- [ ] Tauri v2 project setup
-- [ ] Link `packages/ui` as a workspace dependency
-- [ ] Implement Tauri commands: `create_vault`, `load_vault`, `save_vault`, `get_user_profile`
-- [ ] Integrate Tauri OAuth plugin (desktop) ← moved from 1.7
-- [ ] Wire `useVaultStore` to Tauri IPC commands ← moved from 1.8
+- [x] Tauri v2 project setup
+- [x] Link `packages/ui` as a workspace dependency
+- [x] Implement Tauri commands: `create_vault`, `load_vault`, `save_vault`, `get_user_profile`
+- [x] Integrate Tauri OAuth plugin (desktop) ← moved from 1.7
+- [x] Wire `useVaultStore` to Tauri IPC commands ← moved from 1.8
 - [ ] App runs and GitHub OAuth completes on desktop (macOS)
 - [ ] App runs on Windows
 - [ ] App runs on Linux

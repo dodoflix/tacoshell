@@ -4,6 +4,7 @@ members = [
     "packages/core",
     "packages/core-wasm",
     "packages/ws-proxy",
+    "packages/tauri-app/src-tauri",
 ]
 
 [workspace.package]
