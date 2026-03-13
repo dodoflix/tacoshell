@@ -15,6 +15,7 @@ integration = []
 [dependencies]
 # Async
 tokio = { workspace = true }
+tokio-util = "0.7"
 
 # SSH & SFTP
 russh = { workspace = true }
