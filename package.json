@@ -1,0 +1,35 @@
+{
+  "name": "tacoshell",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "prepare": "husky",
+    "dev:desktop": "pnpm --filter tauri-app tauri dev",
+    "dev:web": "pnpm --filter web-app dev",
+    "build:desktop": "pnpm --filter tauri-app tauri build",
+    "build:web": "pnpm --filter web-app build",
+    "build:wasm": "wasm-pack build packages/core-wasm --target web",
+    "test": "pnpm -r run test",
+    "test:coverage": "pnpm -r run test:coverage",
+    "lint": "pnpm -r run lint",
+    "format": "pnpm -r run format",
+    "format:check": "pnpm -r run format:check"
+  },
+  "devDependencies": {
+    "husky": "^9.0.0",
+    "lint-staged": "^15.0.0"
+  },
+  "lint-staged": {
+    "packages/**/*.{ts,tsx}": [
+      "eslint --fix",
+      "prettier --write"
+    ],
+    "packages/**/*.rs": [
+      "rustfmt"
+    ]
+  },
+  "engines": {
+    "node": ">=20",
+    "pnpm": ">=9"
+  }
+}

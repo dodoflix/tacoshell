@@ -1,0 +1,75 @@
+[workspace]
+resolver = "2"
+members = [
+    "packages/core",
+    "packages/core-wasm",
+    "packages/ws-proxy",
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+authors = ["Tacoshell Contributors"]
+license = "MIT"
+repository = "https://github.com/your-org/tacoshell"
+
+[workspace.dependencies]
+# Async runtime
+tokio = { version = "1", features = ["full"] }
+tokio-test = "0.4"
+
+# SSH
+russh = "0.45"
+russh-sftp = "2"
+
+# FTP
+suppaftp = { version = "6", features = ["async-native-tls"] }
+
+# Kubernetes
+kube = { version = "0.93", features = ["runtime", "derive"] }
+k8s-openapi = { version = "0.23", features = ["latest"] }
+
+# GitHub API
+octocrab = "0.39"
+
+# Cryptography
+ring = "0.17"
+aes-gcm = "0.10"
+argon2 = "0.5"
+zeroize = { version = "1", features = ["derive"] }
+secrecy = "0.8"
+
+# Serialization
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+# Utilities
+uuid = { version = "1", features = ["v4", "serde"] }
+chrono = { version = "0.4", features = ["serde"] }
+base64 = "0.22"
+thiserror = "1"
+anyhow = "1"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+# WASM
+wasm-bindgen = "0.2"
+wasm-bindgen-futures = "0.4"
+js-sys = "0.3"
+web-sys = { version = "0.3", features = ["WebSocket", "MessageEvent", "BinaryType"] }
+
+# Testing
+mockall = "0.13"
+pretty_assertions = "1"
+assert_matches = "1.5"
+testcontainers = "0.23"
+wiremock = "0.6"
+
+[profile.release]
+lto = true
+codegen-units = 1
+strip = true
+opt-level = 3
+
+[profile.release.package.core-wasm]
+opt-level = "z"   # Optimize for size in WASM
