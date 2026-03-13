@@ -2,31 +2,11 @@ import { invoke } from '@tauri-apps/api/core'
 import { listen } from '@tauri-apps/api/event'
 import { start, cancel } from '@fabianlars/tauri-plugin-oauth'
 import type { GitHubUser } from '@tacoshell/ui/stores'
+import { generateRandom, generateCodeChallenge } from '@tacoshell/ui/lib/crypto'
 
 export interface DesktopOAuthResult {
   token: string
   user: GitHubUser
-}
-
-function generateRandom(length: number): string {
-  // Use ceil(length/2) bytes so that hex encoding yields exactly `length` hex chars,
-  // preserving the full entropy of every byte.
-  const array = new Uint8Array(Math.ceil(length / 2))
-  crypto.getRandomValues(array)
-  return Array.from(array, (byte) => byte.toString(16).padStart(2, '0'))
-    .join('')
-    .slice(0, length)
-}
-
-async function generateCodeChallenge(verifier: string): Promise<string> {
-  const encoder = new TextEncoder()
-  const data = encoder.encode(verifier)
-  const digest = await crypto.subtle.digest('SHA-256', data)
-  const bytes = new Uint8Array(digest)
-  return btoa(String.fromCharCode(...bytes))
-    .replace(/\+/g, '-')
-    .replace(/\//g, '_')
-    .replace(/=/g, '')
 }
 
 /**

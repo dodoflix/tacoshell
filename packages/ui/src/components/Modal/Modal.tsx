@@ -29,6 +29,9 @@ export function Modal({ open, onClose, title, children }: ModalProps) {
         />
         <Dialog.Content
           aria-labelledby={titleId}
+          // Radix Dialog.Content warns when aria-describedby is absent; passing
+          // undefined explicitly suppresses the warning without adding a
+          // redundant description element (the title alone is sufficient here).
           aria-describedby={undefined}
           aria-modal="true"
           className={cn(

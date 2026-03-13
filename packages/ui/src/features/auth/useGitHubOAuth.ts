@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { generateRandom, generateCodeChallenge } from '../../lib/crypto'
 
 interface UseGitHubOAuthOptions {
   clientId: string
@@ -12,27 +13,6 @@ interface UseGitHubOAuthReturn {
   startLogin: () => void
   exchangeCode: (code: string, state: string) => Promise<void>
   isExchanging: boolean
-}
-
-function generateRandom(length: number): string {
-  // Use ceil(length/2) bytes so that hex encoding yields exactly `length` hex chars,
-  // preserving the full entropy of every byte.
-  const array = new Uint8Array(Math.ceil(length / 2))
-  crypto.getRandomValues(array)
-  return Array.from(array, (byte) => byte.toString(16).padStart(2, '0'))
-    .join('')
-    .slice(0, length)
-}
-
-async function generateCodeChallenge(verifier: string): Promise<string> {
-  const encoder = new TextEncoder()
-  const data = encoder.encode(verifier)
-  const digest = await crypto.subtle.digest('SHA-256', data)
-  const bytes = new Uint8Array(digest)
-  return btoa(String.fromCharCode(...bytes))
-    .replace(/\+/g, '-')
-    .replace(/\//g, '_')
-    .replace(/=/g, '')
 }
 
 export function useGitHubOAuth({
