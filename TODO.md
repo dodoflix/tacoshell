@@ -23,12 +23,12 @@ Legend: `[ ]` = not started · `[~]` = in progress · `[x]` = done
 
 ### 1.2 CI Pipeline
 
-- [ ] `.github/workflows/ci.yml` — lint, test-rust, test-typescript, test-wasm, integration, build-desktop, build-web
-- [ ] `.github/workflows/release.yml` — signed binaries, npm WASM publish, web deploy, changelog
-- [ ] Configure Codecov with coverage thresholds (Rust: 90%, TS: 80%)
-- [ ] Add `cargo audit` step to CI
-- [ ] Add PR template (`.github/pull_request_template.md`)
-- [ ] Add issue templates (bug, feature, security)
+- [x] `.github/workflows/ci.yml` — lint, test-rust, test-typescript, test-wasm, integration, build-desktop, build-web
+- [x] `.github/workflows/release.yml` — signed binaries, npm WASM publish, web deploy, changelog
+- [x] Configure Codecov with coverage thresholds (Rust: 90%, TS: 80%)
+- [x] Add `cargo audit` step to CI
+- [x] Add PR template (`.github/pull_request_template.md`)
+- [x] Add issue templates (bug, feature, security)
 
 ### 1.3 Crypto Engine (`packages/core/src/crypto/`)
 

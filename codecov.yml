@@ -1,0 +1,36 @@
+coverage:
+  status:
+    project:
+      default:
+        target: auto
+        threshold: 1%
+    patch:
+      default:
+        target: 80%
+
+  # Per-flag thresholds
+  flags:
+    rust:
+      target: 90%
+      threshold: 1%
+      paths:
+        - packages/core/src/
+    typescript:
+      target: 80%
+      threshold: 1%
+      paths:
+        - packages/ui/src/
+        - packages/web-app/src/
+        - packages/tauri-app/src/
+
+comment:
+  layout: reach,diff,flags,tree
+  behavior: default
+  require_changes: true
+
+ignore:
+  - "packages/*/src/**/__tests__/**"
+  - "packages/*/src/**/test-setup.*"
+  - "**/*.d.ts"
+  - "**/node_modules/**"
+  - "**/target/**"
