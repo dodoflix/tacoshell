@@ -74,13 +74,13 @@ Legend: `[ ]` = not started · `[~]` = in progress · `[x]` = done
 
 ### 1.7 Auth Feature (`packages/ui/src/features/auth/`)
 
-- [ ] Write failing tests for `useAuthStore`
-- [ ] Implement `useAuthStore` (token, user profile, auth status)
-- [ ] Implement GitHub OAuth PKCE flow (web)
+- [x] Write failing tests for `useAuthStore`
+- [x] Implement `useAuthStore` (token, user profile, auth status)
+- [x] Implement GitHub OAuth PKCE flow (web)
 - [ ] Integrate Tauri OAuth plugin (desktop)
-- [ ] Implement `GitHubLoginButton`
-- [ ] Implement `VaultPassphraseModal` (first-time setup + unlock)
-- [ ] Implement `SessionGuard` HOC
+- [x] Implement `GitHubLoginButton`
+- [x] Implement `VaultPassphraseModal` (first-time setup + unlock)
+- [x] Implement `SessionGuard` HOC
 - [ ] E2E test: full login flow (web mock + desktop)
 
 ### 1.8 Vault Store (`packages/ui/src/stores/useVaultStore.ts`)

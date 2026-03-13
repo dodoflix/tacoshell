@@ -1,1 +1,2 @@
-// Store exports added in Phase 1.7+
+export { useAuthStore } from './useAuthStore'
+export type { AuthState, AuthStatus, GitHubUser } from './useAuthStore'
