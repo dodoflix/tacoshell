@@ -121,7 +121,10 @@ async fn ssh_password_auth_connect_succeeds() {
         .await
         .expect("should connect with correct password");
 
-    assert!(adapter.is_alive(), "adapter should report alive after connect");
+    assert!(
+        adapter.is_alive(),
+        "adapter should report alive after connect"
+    );
     adapter.disconnect().await.expect("clean disconnect");
 }
 
@@ -132,10 +135,7 @@ async fn ssh_password_auth_wrong_password_fails() {
     let credential = Credential::Password(SecretString::new("wrongpassword".to_owned()));
 
     let result = SshAdapter::connect(&profile, credential).await;
-    assert!(
-        result.is_err(),
-        "connect with wrong password should fail"
-    );
+    assert!(result.is_err(), "connect with wrong password should fail");
     match result.unwrap_err() {
         tacoshell_core::connection::ConnectionError::AuthFailed { .. } => {}
         other => panic!("expected AuthFailed, got {other:?}"),
@@ -238,9 +238,15 @@ async fn ssh_tofu_reconnect_with_same_host_key_succeeds() {
 
     // reconnect() reuses the same known_keys store, so the host key must be
     // verified and must match — this is what validates TOFU persistence.
-    adapter.reconnect().await.expect("reconnect with same host key should succeed");
+    adapter
+        .reconnect()
+        .await
+        .expect("reconnect with same host key should succeed");
 
-    assert!(adapter.is_alive(), "adapter should be alive after reconnect");
+    assert!(
+        adapter.is_alive(),
+        "adapter should be alive after reconnect"
+    );
     adapter.disconnect().await.ok();
 }
 
@@ -399,7 +405,10 @@ async fn ssh_is_alive_false_after_disconnect() {
     // After disconnect the background task sets alive = false.
     // Give it a moment to propagate.
     tokio::time::sleep(Duration::from_millis(50)).await;
-    assert!(!adapter.is_alive(), "is_alive should be false after disconnect");
+    assert!(
+        !adapter.is_alive(),
+        "is_alive should be false after disconnect"
+    );
 }
 
 // ---------------------------------------------------------------------------
@@ -460,10 +469,16 @@ async fn ssh_send_input_after_pipe_break_returns_error_and_alive_false() {
 
     // send_input must fail cleanly.
     let result = adapter.send_input(b"echo test\n").await;
-    assert!(result.is_err(), "send_input must fail when channel is closed");
+    assert!(
+        result.is_err(),
+        "send_input must fail when channel is closed"
+    );
 
     // alive must be false at the point send_input fails.
-    assert!(!adapter.is_alive(), "alive must be false when send_input fails");
+    assert!(
+        !adapter.is_alive(),
+        "alive must be false when send_input fails"
+    );
 }
 
 /// After the output pipe breaks, resize must also return an error and alive

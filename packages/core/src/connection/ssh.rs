@@ -192,12 +192,10 @@ async fn authenticate(
     credential: &Credential,
 ) -> Result<(), ConnectionError> {
     let ok = match credential {
-        Credential::Password(secret) => {
-            handle
-                .authenticate_password(username, secret.expose_secret().as_str())
-                .await
-                .map_err(ConnectionError::from)?
-        }
+        Credential::Password(secret) => handle
+            .authenticate_password(username, secret.expose_secret().as_str())
+            .await
+            .map_err(ConnectionError::from)?,
         Credential::PublicKey {
             private_key_pem,
             passphrase,
@@ -229,9 +227,7 @@ async fn authenticate(
                 });
             };
 
-            let (_, result) = handle
-                .authenticate_future(username, pub_key, agent)
-                .await;
+            let (_, result) = handle.authenticate_future(username, pub_key, agent).await;
 
             result.map_err(|e| ConnectionError::Protocol(format!("SSH agent auth: {e}")))?
         }
@@ -272,9 +268,7 @@ async fn connect_inner(
     let mut handle = russh::client::connect(config, addr.as_str(), handler)
         .await
         .map_err(|e| match e {
-            ConnectionError::Io(ref io)
-                if io.kind() == std::io::ErrorKind::ConnectionRefused =>
-            {
+            ConnectionError::Io(ref io) if io.kind() == std::io::ErrorKind::ConnectionRefused => {
                 ConnectionError::Refused {
                     host: profile.host.clone(),
                     port: profile.port,
@@ -549,10 +543,17 @@ mod tests {
         use russh::client::Handler as _;
 
         let known = fresh_known_keys();
-        let mut handler = make_handler("host.example.com", 22, HostKeyPolicy::StrictFirstConnect, Arc::clone(&known));
+        let mut handler = make_handler(
+            "host.example.com",
+            22,
+            HostKeyPolicy::StrictFirstConnect,
+            Arc::clone(&known),
+        );
 
         let key_pair = KeyPair::generate_ed25519().expect("ed25519 keygen failed");
-        let pub_key = key_pair.clone_public_key().expect("clone public key failed");
+        let pub_key = key_pair
+            .clone_public_key()
+            .expect("clone public key failed");
 
         let accepted = handler.check_server_key(&pub_key).await.unwrap();
         assert!(accepted, "first connect should be accepted (TOFU)");
@@ -571,16 +572,31 @@ mod tests {
         let known = fresh_known_keys();
 
         let key_pair = KeyPair::generate_ed25519().expect("ed25519 keygen failed");
-        let pub_key = key_pair.clone_public_key().expect("clone public key failed");
+        let pub_key = key_pair
+            .clone_public_key()
+            .expect("clone public key failed");
 
         // First connect — stores the key.
-        let mut h1 = make_handler("host.example.com", 22, HostKeyPolicy::StrictFirstConnect, Arc::clone(&known));
+        let mut h1 = make_handler(
+            "host.example.com",
+            22,
+            HostKeyPolicy::StrictFirstConnect,
+            Arc::clone(&known),
+        );
         h1.check_server_key(&pub_key).await.unwrap();
 
         // Second connect with the SAME key — must be accepted.
-        let mut h2 = make_handler("host.example.com", 22, HostKeyPolicy::StrictFirstConnect, Arc::clone(&known));
+        let mut h2 = make_handler(
+            "host.example.com",
+            22,
+            HostKeyPolicy::StrictFirstConnect,
+            Arc::clone(&known),
+        );
         let accepted = h2.check_server_key(&pub_key).await.unwrap();
-        assert!(accepted, "same key should be accepted on subsequent connects");
+        assert!(
+            accepted,
+            "same key should be accepted on subsequent connects"
+        );
     }
 
     #[tokio::test]
@@ -593,14 +609,24 @@ mod tests {
         let pub1 = key1.clone_public_key().expect("pub1");
 
         // First connect — stores key1.
-        let mut h1 = make_handler("host.example.com", 22, HostKeyPolicy::StrictFirstConnect, Arc::clone(&known));
+        let mut h1 = make_handler(
+            "host.example.com",
+            22,
+            HostKeyPolicy::StrictFirstConnect,
+            Arc::clone(&known),
+        );
         h1.check_server_key(&pub1).await.unwrap();
 
         // Second connect with a DIFFERENT key — must be rejected.
         let key2 = KeyPair::generate_ed25519().expect("keygen");
         let pub2 = key2.clone_public_key().expect("pub2");
 
-        let mut h2 = make_handler("host.example.com", 22, HostKeyPolicy::StrictFirstConnect, Arc::clone(&known));
+        let mut h2 = make_handler(
+            "host.example.com",
+            22,
+            HostKeyPolicy::StrictFirstConnect,
+            Arc::clone(&known),
+        );
         let result = h2.check_server_key(&pub2).await;
 
         match result {
@@ -624,10 +650,10 @@ mod tests {
         {
             let key2 = KeyPair::generate_ed25519().expect("keygen");
             let pub2 = key2.clone_public_key().expect("pub2");
-            known.lock().await.insert(
-                "host.example.com:22".to_owned(),
-                pub2.public_key_bytes(),
-            );
+            known
+                .lock()
+                .await
+                .insert("host.example.com:22".to_owned(), pub2.public_key_bytes());
         }
 
         // AcceptAll should ignore the mismatch.
@@ -649,11 +675,21 @@ mod tests {
         let pub_b = key_b.clone_public_key().expect("pub_b");
 
         // Connect to host-a.
-        let mut ha = make_handler("a.example.com", 22, HostKeyPolicy::StrictFirstConnect, Arc::clone(&known));
+        let mut ha = make_handler(
+            "a.example.com",
+            22,
+            HostKeyPolicy::StrictFirstConnect,
+            Arc::clone(&known),
+        );
         ha.check_server_key(&pub_a).await.unwrap();
 
         // Connect to host-b (different host, different key) — should succeed.
-        let mut hb = make_handler("b.example.com", 22, HostKeyPolicy::StrictFirstConnect, Arc::clone(&known));
+        let mut hb = make_handler(
+            "b.example.com",
+            22,
+            HostKeyPolicy::StrictFirstConnect,
+            Arc::clone(&known),
+        );
         let accepted = hb.check_server_key(&pub_b).await.unwrap();
         assert!(accepted, "different host should be treated independently");
     }
@@ -671,13 +707,26 @@ mod tests {
         let pub_2222 = key_2222.clone_public_key().expect("pub_2222");
 
         // Connect on port 22 — stores key_22.
-        let mut h22 = make_handler("host.example.com", 22, HostKeyPolicy::StrictFirstConnect, Arc::clone(&known));
+        let mut h22 = make_handler(
+            "host.example.com",
+            22,
+            HostKeyPolicy::StrictFirstConnect,
+            Arc::clone(&known),
+        );
         h22.check_server_key(&pub_22).await.unwrap();
 
         // Connect on port 2222 with a DIFFERENT key — must succeed (different server).
-        let mut h2222 = make_handler("host.example.com", 2222, HostKeyPolicy::StrictFirstConnect, Arc::clone(&known));
+        let mut h2222 = make_handler(
+            "host.example.com",
+            2222,
+            HostKeyPolicy::StrictFirstConnect,
+            Arc::clone(&known),
+        );
         let accepted = h2222.check_server_key(&pub_2222).await.unwrap();
-        assert!(accepted, "same host on different port must be treated as a different server");
+        assert!(
+            accepted,
+            "same host on different port must be treated as a different server"
+        );
     }
 
     // -----------------------------------------------------------------------
@@ -720,14 +769,20 @@ mod tests {
 
         let password_cred = Credential::Password(SecretString::new("hunter2".to_owned()));
         let debug = format!("{password_cred:?}");
-        assert!(!debug.contains("hunter2"), "password must not appear in debug output");
+        assert!(
+            !debug.contains("hunter2"),
+            "password must not appear in debug output"
+        );
 
         let key_cred = Credential::PublicKey {
             private_key_pem: SecretString::new("-----BEGIN OPENSSH".to_owned()),
             passphrase: None,
         };
         let debug = format!("{key_cred:?}");
-        assert!(!debug.contains("BEGIN OPENSSH"), "key material must not appear in debug output");
+        assert!(
+            !debug.contains("BEGIN OPENSSH"),
+            "key material must not appear in debug output"
+        );
     }
 
     // -----------------------------------------------------------------------
@@ -738,13 +793,19 @@ mod tests {
     fn new_ssh_profile_has_strict_host_key_policy_by_default() {
         let p = ConnectionProfile::new_ssh("Test", "host.example.com", 22, "alice");
         let ssh_settings = p.ssh.as_ref().expect("ssh settings present");
-        assert_eq!(ssh_settings.host_key_policy, HostKeyPolicy::StrictFirstConnect);
+        assert_eq!(
+            ssh_settings.host_key_policy,
+            HostKeyPolicy::StrictFirstConnect
+        );
     }
 
     #[test]
     fn new_ssh_profile_has_keepalive_enabled_by_default() {
         let p = ConnectionProfile::new_ssh("Test", "host.example.com", 22, "alice");
         let ssh_settings = p.ssh.as_ref().expect("ssh settings present");
-        assert!(ssh_settings.keepalive_secs.is_some(), "keepalive should be enabled by default");
+        assert!(
+            ssh_settings.keepalive_secs.is_some(),
+            "keepalive should be enabled by default"
+        );
     }
 }
