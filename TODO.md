@@ -32,15 +32,15 @@ Legend: `[ ]` = not started · `[~]` = in progress · `[x]` = done
 
 ### 1.3 Crypto Engine (`packages/core/src/crypto/`)
 
-- [ ] Write failing tests for `kdf.rs` (Argon2id key derivation)
-- [ ] Implement `kdf.rs`
-- [ ] Write failing tests for `cipher.rs` (AES-256-GCM encrypt/decrypt)
-- [ ] Implement `cipher.rs`
-- [ ] Write failing tests for `vault.rs` (serialization round-trips)
-- [ ] Implement `vault.rs`
-- [ ] Implement `zeroize` on all sensitive types
-- [ ] Verify 90%+ coverage via `cargo-tarpaulin`
-- [ ] Add `cargo-mutants` baseline
+- [x] Write failing tests for `kdf.rs` (Argon2id key derivation)
+- [x] Implement `kdf.rs`
+- [x] Write failing tests for `cipher.rs` (AES-256-GCM encrypt/decrypt)
+- [x] Implement `cipher.rs`
+- [x] Write failing tests for `vault.rs` (serialization round-trips)
+- [x] Implement `vault.rs`
+- [x] Implement `zeroize` on all sensitive types
+- [x] Verify 90%+ coverage via `cargo-tarpaulin`
+- [x] Add `cargo-mutants` baseline
 
 ### 1.4 GitHub Storage Engine (`packages/core/src/storage/`)
 
