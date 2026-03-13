@@ -107,8 +107,8 @@ Legend: `[ ]` = not started · `[~]` = in progress · `[x]` = done
 
 ### 2.1 SSH Adapter (`packages/core/src/connection/ssh.rs`)
 
-- [ ] Write failing tests for password authentication
-- [ ] Implement password auth
+- [x] Write failing tests for password authentication
+- [x] Implement password auth
 - [ ] Write failing tests for public key authentication (Ed25519, RSA)
 - [ ] Implement public key auth
 - [ ] Write failing tests for SSH agent forwarding
@@ -116,7 +116,7 @@ Legend: `[ ]` = not started · `[~]` = in progress · `[x]` = done
 - [ ] Write failing tests for host key verification (TOFU policy)
 - [ ] Implement TOFU host key verification
 - [ ] Implement keepalive (configurable interval)
-- [ ] Write failing integration tests (testcontainers + openssh-server)
+- [x] Write failing integration tests (testcontainers + openssh-server)
 - [ ] Integration tests pass
 
 ### 2.2 Terminal View (`packages/ui/src/features/terminal/`)
