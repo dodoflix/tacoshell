@@ -19,6 +19,12 @@ serde_json = "1"
 tokio = { version = "1", features = ["full"] }
 anyhow = "1"
 tracing = "0.1"
+open = "5"
+url = { workspace = true }
 reqwest = { version = "0.12", features = ["json"] }
 # core crate
 tacoshell-core = { path = "../../core" }
+
+[dev-dependencies]
+wiremock = { workspace = true }
+tokio-test = { workspace = true }

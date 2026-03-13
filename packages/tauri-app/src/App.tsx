@@ -1,15 +1,26 @@
 import { useState, useEffect } from 'react'
-import { SessionGuard, VaultPassphraseModal, GitHubLoginButton } from '@tacoshell/ui/features/auth'
+import { SessionGuard, VaultPassphraseModal } from '@tacoshell/ui/features/auth'
+import { Button } from '@tacoshell/ui/components'
 import { useAuthStore, useVaultStore } from '@tacoshell/ui/stores'
 import { TauriVaultService } from './services/TauriVaultService'
+import { startDesktopOAuth } from './services/TauriOAuthService'
 
 const vaultService = new TauriVaultService()
 
 export default function App() {
-  const { status, token, user } = useAuthStore()
-  const { setService, load, syncStatus } = useVaultStore()
+  const {
+    status,
+    token,
+    user,
+    setToken,
+    setUser,
+    setStatus,
+    setError: setAuthError,
+  } = useAuthStore()
+  const { setService, load, syncStatus, error: vaultError } = useVaultStore()
   const [showPassphrase, setShowPassphrase] = useState(false)
   const [passphraseError, setPassphraseError] = useState<string | undefined>()
+  const [oauthLoading, setOauthLoading] = useState(false)
 
   useEffect(() => {
     setService(vaultService)
@@ -21,12 +32,34 @@ export default function App() {
     }
   }, [status, syncStatus])
 
-  const handlePassphraseSubmit = async (passphrase: string) => {
-    if (!token || !user) return
-    try {
-      useVaultStore.getState().setCredentials(token, passphrase)
-      await load(token, passphrase)
+  useEffect(() => {
+    if (syncStatus === 'synced') {
       setShowPassphrase(false)
+      setPassphraseError(undefined)
+    }
+  }, [syncStatus])
+
+  const handleLogin = async (): Promise<void> => {
+    setOauthLoading(true)
+    setStatus('authenticating')
+    try {
+      const clientId = import.meta.env.VITE_GITHUB_CLIENT_ID ?? ''
+      const result = await startDesktopOAuth(clientId)
+      setToken(result.token)
+      setUser(result.user)
+    } catch (e) {
+      const message = e instanceof Error ? e.message : 'Login failed'
+      setAuthError(message)
+    } finally {
+      setOauthLoading(false)
+    }
+  }
+
+  const handlePassphraseSubmit = async (passphrase: string): Promise<void> => {
+    if (!token || !user) return
+    setPassphraseError(undefined)
+    try {
+      await load(token, passphrase)
     } catch (e) {
       setPassphraseError(e instanceof Error ? e.message : 'Failed to unlock vault')
     }
@@ -43,10 +76,16 @@ export default function App() {
             height: '100vh',
           }}
         >
-          <GitHubLoginButton
-            clientId={import.meta.env.VITE_GITHUB_CLIENT_ID ?? ''}
-            redirectUri={import.meta.env.VITE_OAUTH_REDIRECT_URI ?? ''}
-          />
+          <Button
+            variant="secondary"
+            onClick={() => {
+              void handleLogin()
+            }}
+            loading={oauthLoading}
+            disabled={oauthLoading}
+          >
+            Sign in with GitHub
+          </Button>
         </div>
       }
     >
@@ -56,7 +95,7 @@ export default function App() {
         onSubmit={(p) => {
           void handlePassphraseSubmit(p)
         }}
-        error={passphraseError}
+        error={passphraseError ?? vaultError ?? undefined}
       />
       <div style={{ padding: '2rem' }}>
         <p>Welcome, {user?.login ?? 'user'}!</p>

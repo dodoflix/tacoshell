@@ -93,6 +93,10 @@ Legend: `[ ]` = not started · `[~]` = in progress · `[x]` = done
 - [x] Implement Tauri commands: `create_vault`, `load_vault`, `save_vault`, `get_user_profile`
 - [x] Integrate Tauri OAuth plugin (desktop) ← moved from 1.7
 - [x] Wire `useVaultStore` to Tauri IPC commands ← moved from 1.8
+- [x] Implement `exchange_oauth_code` Tauri command (PKCE token exchange, no client_secret)
+- [x] Implement `open_url` Tauri command (cross-platform system browser opener)
+- [x] Implement `startDesktopOAuth` service (full PKCE OAuth flow via tauri-plugin-oauth)
+- [x] Wire desktop OAuth login to `useAuthStore` in `App.tsx`
 - [ ] App runs and GitHub OAuth completes on desktop (macOS)
 - [ ] App runs on Windows
 - [ ] App runs on Linux

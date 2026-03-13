@@ -10,7 +10,7 @@ export interface TreeNode {
 
 interface TreeViewProps {
   nodes: TreeNode[]
-  onNodeClick?: (node: TreeNode) => void
+  onNodeClick?: ((node: TreeNode) => void) | undefined
   className?: string
 }
 
@@ -19,7 +19,7 @@ interface TreeNodeItemProps {
   depth: number
   expandedIds: Set<string>
   onToggle: (id: string) => void
-  onNodeClick?: (node: TreeNode) => void
+  onNodeClick?: ((node: TreeNode) => void) | undefined
 }
 
 function TreeNodeItem({ node, depth, expandedIds, onToggle, onNodeClick }: TreeNodeItemProps) {
