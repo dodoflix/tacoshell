@@ -314,6 +314,9 @@ async fn connect_inner(
                     match msg {
                         Some(russh::ChannelMsg::Data { data }) => {
                             if output_tx.send(data.to_vec()).await.is_err() {
+                                // Output receiver was dropped; close the SSH
+                                // channel so the server learns immediately.
+                                let _ = ch.close().await;
                                 break;
                             }
                         }
@@ -328,12 +331,15 @@ async fn connect_inner(
                     match cmd {
                         Some(ShellCmd::Data(bytes)) => {
                             if ch.data(std::io::Cursor::new(bytes)).await.is_err() {
-                                // Write failure means the channel is broken.
+                                // Broken pipe to the remote — close cleanly.
+                                let _ = ch.close().await;
                                 break;
                             }
                         }
                         Some(ShellCmd::Resize { cols, rows }) => {
                             if ch.window_change(cols as u32, rows as u32, 0, 0).await.is_err() {
+                                // Broken pipe to the remote — close cleanly.
+                                let _ = ch.close().await;
                                 break;
                             }
                         }
@@ -345,7 +351,9 @@ async fn connect_inner(
                 }
             }
         }
-        alive_bg.store(false, Ordering::Relaxed);
+        // Use Release ordering so the false store is visible to any thread
+        // that subsequently reads the flag with Acquire.
+        alive_bg.store(false, Ordering::Release);
     });
 
     Ok(SshAdapter {
@@ -386,7 +394,9 @@ impl ConnectionAdapter for SshAdapter {
     }
 
     fn is_alive(&self) -> bool {
-        self.alive.load(Ordering::Relaxed)
+        // Acquire pairs with the Release store in the background task so the
+        // false is visible without reordering on weakly-ordered architectures.
+        self.alive.load(Ordering::Acquire)
     }
 
     async fn reconnect(&mut self) -> Result<(), ConnectionError> {
@@ -414,7 +424,12 @@ impl TerminalAdapter for SshAdapter {
         self.shell_tx
             .send(ShellCmd::Data(data.to_vec()))
             .await
-            .map_err(|_| ConnectionError::Protocol("shell channel closed".to_owned()))
+            .map_err(|_| {
+                // Defensively mark dead in case the background task's Release
+                // store hasn't propagated to this thread yet.
+                self.alive.store(false, Ordering::Release);
+                ConnectionError::Protocol("shell channel closed".to_owned())
+            })
     }
 
     fn output_stream(&mut self) -> Option<mpsc::Receiver<Vec<u8>>> {
@@ -425,7 +440,11 @@ impl TerminalAdapter for SshAdapter {
         self.shell_tx
             .send(ShellCmd::Resize { cols, rows })
             .await
-            .map_err(|_| ConnectionError::Protocol("shell channel closed".to_owned()))
+            .map_err(|_| {
+                // Defensive alive marking — same rationale as send_input.
+                self.alive.store(false, Ordering::Release);
+                ConnectionError::Protocol("shell channel closed".to_owned())
+            })
     }
 
     async fn exec(&self, command: &str) -> Result<ExecResult, ConnectionError> {

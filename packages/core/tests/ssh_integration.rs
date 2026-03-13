@@ -403,6 +403,93 @@ async fn ssh_is_alive_false_after_disconnect() {
 }
 
 // ---------------------------------------------------------------------------
+// Broken-pipe / channel-cleanup
+// ---------------------------------------------------------------------------
+
+/// Dropping the output receiver while the shell is running should cause the
+/// background task to close the SSH channel promptly and mark the adapter dead.
+/// Before the fix this passed if the server happened to send data quickly, but
+/// the channel was left open on the server side (no explicit `ch.close()`).
+#[tokio::test]
+async fn ssh_output_pipe_break_sets_alive_false() {
+    let (_container, profile) = start_sshd_password().await;
+    let credential = Credential::Password(SecretString::new(TEST_PASSWORD.to_owned()));
+
+    let mut adapter = SshAdapter::connect(&profile, credential)
+        .await
+        .expect("connect");
+
+    // Take the output receiver then immediately drop it — this breaks the
+    // output pipe. The server will send a shell prompt within milliseconds, so
+    // the background task will attempt output_tx.send(), detect the broken
+    // pipe, call ch.close(), and mark alive = false.
+    let rx = adapter.output_stream().expect("output_stream");
+    drop(rx);
+
+    // Allow up to 500 ms for the background task to detect the broken pipe.
+    let deadline = tokio::time::Instant::now() + Duration::from_millis(500);
+    while adapter.is_alive() && tokio::time::Instant::now() < deadline {
+        tokio::time::sleep(Duration::from_millis(20)).await;
+    }
+
+    assert!(
+        !adapter.is_alive(),
+        "adapter must be dead after output receiver is dropped and server sends data"
+    );
+}
+
+/// After the output pipe breaks, send_input must return an error (not panic or
+/// block) and is_alive() must be false.
+#[tokio::test]
+async fn ssh_send_input_after_pipe_break_returns_error_and_alive_false() {
+    let (_container, profile) = start_sshd_password().await;
+    let credential = Credential::Password(SecretString::new(TEST_PASSWORD.to_owned()));
+
+    let mut adapter = SshAdapter::connect(&profile, credential)
+        .await
+        .expect("connect");
+
+    // Drop output receiver to trigger background task shutdown.
+    drop(adapter.output_stream());
+
+    // Wait for the background task to exit.
+    let deadline = tokio::time::Instant::now() + Duration::from_millis(500);
+    while adapter.is_alive() && tokio::time::Instant::now() < deadline {
+        tokio::time::sleep(Duration::from_millis(20)).await;
+    }
+
+    // send_input must fail cleanly.
+    let result = adapter.send_input(b"echo test\n").await;
+    assert!(result.is_err(), "send_input must fail when channel is closed");
+
+    // alive must be false at the point send_input fails.
+    assert!(!adapter.is_alive(), "alive must be false when send_input fails");
+}
+
+/// After the output pipe breaks, resize must also return an error and alive
+/// must be false — matching the same contract as send_input.
+#[tokio::test]
+async fn ssh_resize_after_pipe_break_returns_error_and_alive_false() {
+    let (_container, profile) = start_sshd_password().await;
+    let credential = Credential::Password(SecretString::new(TEST_PASSWORD.to_owned()));
+
+    let mut adapter = SshAdapter::connect(&profile, credential)
+        .await
+        .expect("connect");
+
+    drop(adapter.output_stream());
+
+    let deadline = tokio::time::Instant::now() + Duration::from_millis(500);
+    while adapter.is_alive() && tokio::time::Instant::now() < deadline {
+        tokio::time::sleep(Duration::from_millis(20)).await;
+    }
+
+    let result = adapter.resize(80, 24).await;
+    assert!(result.is_err(), "resize must fail when channel is closed");
+    assert!(!adapter.is_alive(), "alive must be false when resize fails");
+}
+
+// ---------------------------------------------------------------------------
 // keepalive
 // ---------------------------------------------------------------------------
 
