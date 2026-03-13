@@ -10,16 +10,16 @@ Legend: `[ ]` = not started · `[~]` = in progress · `[x]` = done
 
 ### 1.1 Monorepo Scaffold
 
-- [ ] Create `Cargo.workspace.toml` with all Rust members
-- [ ] Create `pnpm-workspace.yaml`
-- [ ] Create root `package.json` with workspace scripts
-- [ ] Create `tsconfig.base.json` (shared TS config)
-- [ ] Set up `rustfmt.toml`
-- [ ] Set up `clippy.toml` (deny unsafe, unwrap in non-test code)
-- [ ] Create `.editorconfig`
-- [ ] Create `.gitignore` (Rust + Node + Tauri + IDE)
-- [ ] Install and configure `husky` pre-commit hooks
-- [ ] Configure `lint-staged` for Rust and TypeScript
+- [x] Create `Cargo.workspace.toml` with all Rust members
+- [x] Create `pnpm-workspace.yaml`
+- [x] Create root `package.json` with workspace scripts
+- [x] Create `tsconfig.base.json` (shared TS config)
+- [x] Set up `rustfmt.toml`
+- [x] Set up `clippy.toml` (deny unsafe, unwrap in non-test code)
+- [x] Create `.editorconfig`
+- [x] Create `.gitignore` (Rust + Node + Tauri + IDE)
+- [x] Install and configure `husky` pre-commit hooks
+- [x] Configure `lint-staged` for Rust and TypeScript
 
 ### 1.2 CI Pipeline
 

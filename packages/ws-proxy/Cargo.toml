@@ -1,0 +1,30 @@
+[package]
+name = "ws-proxy"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+description = "Tacoshell WebSocket-to-TCP relay — enables SSH/FTP from the browser"
+
+[[bin]]
+name = "ws-proxy"
+path = "src/main.rs"
+
+[dependencies]
+tokio = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+anyhow = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+
+# WebSocket server
+tokio-tungstenite = { version = "0.24", features = ["native-tls"] }
+futures-util = "0.3"
+
+# CLI config
+clap = { version = "4", features = ["derive", "env"] }
+
+[dev-dependencies]
+tokio-test = { workspace = true }

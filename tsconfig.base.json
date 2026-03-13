@@ -1,0 +1,32 @@
+{
+  "compilerOptions": {
+    // Language
+    "target": "ES2022",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "useDefineForClassFields": true,
+
+    // Strict mode — no exceptions
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "noImplicitReturns": true,
+    "noFallthroughCasesInSwitch": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "exactOptionalPropertyTypes": true,
+
+    // Module interop
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+
+    // Output
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+
+    // JSX (each package overrides jsx setting as needed)
+    "jsx": "react-jsx"
+  }
+}

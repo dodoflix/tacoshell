@@ -1,0 +1,6 @@
+dist/
+node_modules/
+coverage/
+packages/core-wasm/pkg/
+packages/tauri-app/src-tauri/
+*.lock

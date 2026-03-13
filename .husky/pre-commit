@@ -1,0 +1,8 @@
+#!/usr/bin/env sh
+# Run lint-staged for TypeScript/JS files
+npx lint-staged
+
+# Run cargo fmt check for any staged Rust files
+if git diff --cached --name-only | grep -q '\.rs$'; then
+  cargo fmt --all -- --check
+fi

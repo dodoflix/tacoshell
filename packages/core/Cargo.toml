@@ -1,0 +1,57 @@
+[package]
+name = "tacoshell-core"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Tacoshell core engine — connection management, crypto, and GitHub storage"
+
+[features]
+default = []
+# Enables integration tests that require Docker / external services
+integration = []
+
+[dependencies]
+# Async
+tokio = { workspace = true }
+
+# SSH & SFTP
+russh = { workspace = true }
+russh-sftp = { workspace = true }
+
+# FTP
+suppaftp = { workspace = true }
+
+# Kubernetes
+kube = { workspace = true }
+k8s-openapi = { workspace = true }
+
+# GitHub API
+octocrab = { workspace = true }
+
+# Cryptography
+aes-gcm = { workspace = true }
+argon2 = { workspace = true }
+ring = { workspace = true }
+zeroize = { workspace = true }
+secrecy = { workspace = true }
+
+# Serialization
+serde = { workspace = true }
+serde_json = { workspace = true }
+
+# Utilities
+uuid = { workspace = true }
+chrono = { workspace = true }
+base64 = { workspace = true }
+thiserror = { workspace = true }
+tracing = { workspace = true }
+
+[dev-dependencies]
+tokio-test = { workspace = true }
+mockall = { workspace = true }
+pretty_assertions = { workspace = true }
+assert_matches = { workspace = true }
+testcontainers = { workspace = true }
+wiremock = { workspace = true }

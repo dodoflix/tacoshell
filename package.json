@@ -2,6 +2,7 @@
   "name": "tacoshell",
   "version": "0.1.0",
   "private": true,
+  "type": "module",
   "scripts": {
     "prepare": "husky",
     "dev:desktop": "pnpm --filter tauri-app tauri dev",
@@ -16,11 +17,19 @@
     "format:check": "pnpm -r run format:check"
   },
   "devDependencies": {
+    "@eslint/js": "^9.0.0",
+    "@typescript-eslint/eslint-plugin": "^8.0.0",
+    "@typescript-eslint/parser": "^8.0.0",
+    "eslint": "^9.0.0",
+    "eslint-plugin-react-hooks": "^4.6.0",
+    "eslint-plugin-react-refresh": "^0.4.0",
     "husky": "^9.0.0",
-    "lint-staged": "^15.0.0"
+    "lint-staged": "^15.0.0",
+    "prettier": "^3.3.0",
+    "prettier-plugin-tailwindcss": "^0.6.0"
   },
   "lint-staged": {
-    "packages/**/*.{ts,tsx}": [
+    "packages/**/src/**/*.{ts,tsx}": [
       "eslint --fix",
       "prettier --write"
     ],
@@ -31,5 +40,8 @@
   "engines": {
     "node": ">=20",
     "pnpm": ">=9"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": ["esbuild", "msw"]
   }
 }

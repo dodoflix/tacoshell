@@ -1,0 +1,13 @@
+# Maximum cyclomatic complexity before clippy complains
+cognitive-complexity-threshold = 15
+
+# Deny list enforced in CI via: cargo clippy -- -D warnings
+# Additional manual lints to consider adding to CI flags:
+#   -D clippy::unwrap_used
+#   -D clippy::expect_used
+#   -D clippy::panic
+#   -D clippy::todo
+#
+# These are NOT enabled globally (they fire in test code too) but are
+# enforced in production modules via #![deny(clippy::unwrap_used)] at
+# the top of each non-test source file.

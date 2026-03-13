@@ -1,0 +1,67 @@
+# ─── Rust ───────────────────────────────────────────────────────────
+/target/
+packages/*/target/
+**/*.rs.bk
+Cargo.lock          # committed for binaries, ignored for libraries
+
+# ─── Node / pnpm ────────────────────────────────────────────────────
+node_modules/
+packages/*/node_modules/
+dist/
+packages/*/dist/
+.pnpm-store/
+*.tsbuildinfo
+
+# ─── Tauri ──────────────────────────────────────────────────────────
+packages/tauri-app/src-tauri/target/
+packages/tauri-app/src-tauri/WixTools/
+*.dmg
+*.AppImage
+*.deb
+*.msi
+*.exe
+*.app
+
+# ─── WASM ───────────────────────────────────────────────────────────
+packages/core-wasm/pkg/
+
+# ─── Test / Coverage ────────────────────────────────────────────────
+coverage/
+*.lcov
+*.profraw
+*.profdata
+tarpaulin-report.html
+
+# ─── Environment / Secrets ──────────────────────────────────────────
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+
+# ─── IDE ────────────────────────────────────────────────────────────
+.idea/
+.vscode/
+*.iml
+*.suo
+*.user
+.DS_Store
+Thumbs.db
+
+# ─── OS ─────────────────────────────────────────────────────────────
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Desktop.ini
+
+# ─── Logs ───────────────────────────────────────────────────────────
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
