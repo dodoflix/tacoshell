@@ -1,0 +1,354 @@
+# Instincts generated from https://github.com/dodoflix/tacoshell
+# Generated: 2026-03-13T19:11:33.154Z
+# Version: 2.0
+# Updated to remove duplicates and ensure accuracy
+
+---
+id: tacoshell-commit-conventional
+trigger: "when writing a commit message"
+confidence: 0.9
+domain: git
+source: repo-analysis
+source_repo: https://github.com/dodoflix/tacoshell
+---
+
+# Tacoshell Commit Conventional
+
+## Action
+
+Use conventional commit format with prefixes: feat, fix, test, docs, refactor, chore, ci
+
+## Evidence
+
+- All commits follow conventional format
+- Average commit length 50-63 chars
+- 38 commits analyzed
+
+---
+id: tacoshell-naming-files
+trigger: "when creating a new file"
+confidence: 0.85
+domain: code-style
+source: repo-analysis
+source_repo: https://github.com/dodoflix/tacoshell
+---
+
+# Tacoshell Naming Files
+
+## Action
+
+Use PascalCase for React components and classes, camelCase for other TypeScript files, snake_case for Rust files
+
+## Evidence
+
+- Component files in packages/ui/src/components/ follow PascalCase
+- Other TypeScript files use camelCase
+- Rust files use snake_case
+
+---
+id: tacoshell-import-relative
+trigger: "when importing modules"
+confidence: 0.85
+domain: code-style
+source: repo-analysis
+source_repo: https://github.com/dodoflix/tacoshell
+---
+
+# Tacoshell Import Relative
+
+## Action
+
+Use relative imports for project files instead of absolute path aliases
+
+## Evidence
+
+- Import analysis shows relative import pattern
+- Commit: 'fix: replace @/ path aliases with relative imports'
+
+---
+id: tacoshell-export-style
+trigger: "when exporting from a module"
+confidence: 0.8
+domain: code-style
+source: repo-analysis
+source_repo: https://github.com/dodoflix/tacoshell
+---
+
+# Tacoshell Export Style
+
+## Action
+
+Use mixed exports (combination of named and default exports) with barrel exports in index.ts
+
+## Evidence
+
+- Export pattern analysis shows mixed style
+- Barrel exports used for package-level exports
+
+---
+id: tacoshell-test-framework
+trigger: "when writing tests"
+confidence: 0.9
+domain: testing
+source: repo-analysis
+source_repo: https://github.com/dodoflix/tacoshell
+---
+
+# Tacoshell Test Framework
+
+## Action
+
+Use vitest as the test framework for TypeScript, cargo test for Rust. Test files: *.test.tsx or *.test.ts
+
+## Evidence
+
+- Test framework detected: vitest
+- File pattern: *.test.tsx for components, *.test.ts for utilities
+- Mocking style: msw
+
+---
+id: tacoshell-test-mocking
+trigger: "when mocking dependencies in tests"
+confidence: 0.75
+domain: testing
+source: repo-analysis
+source_repo: https://github.com/dodoflix/tacoshell
+---
+
+# Tacoshell Test Mocking
+
+## Action
+
+Use msw (Mock Service Worker) for mocking HTTP requests and APIs
+
+## Evidence
+
+- Mocking pattern detected: msw
+- Consistent across test files
+
+---
+id: tacoshell-error-handling
+trigger: "when handling errors"
+confidence: 0.7
+domain: code-style
+source: repo-analysis
+source_repo: https://github.com/dodoflix/tacoshell
+---
+
+# Tacoshell Error Handling
+
+## Action
+
+Use try-catch blocks in TypeScript, Result types with ? operator in Rust (no unwrap/expect in production code)
+
+## Evidence
+
+- TypeScript error handling style: try-catch
+- Rust: typed errors with thiserror, no unwrap() in production code
+
+---
+id: tacoshell-monorepo-structure
+trigger: "when organizing code"
+confidence: 0.9
+domain: architecture
+source: repo-analysis
+source_repo: https://github.com/dodoflix/tacoshell
+---
+
+# Tacoshell Monorepo Structure
+
+## Action
+
+Place code in packages/ directory following monorepo structure with separate packages for core, ui, tauri-app, web-app
+
+## Evidence
+
+- Architecture type: monorepo
+- Common folders: packages/core, packages/ui, packages/tauri-app, packages/web-app, packages/ws-proxy
+
+---
+id: tacoshell-workflow-tdd
+trigger: "when adding new functionality"
+confidence: 0.9
+domain: workflow
+source: repo-analysis
+source_repo: https://github.com/dodoflix/tacoshell
+---
+
+# Tacoshell Workflow TDD
+
+## Action
+
+Follow strict Test-Driven Development: Write failing test (RED), implement code to pass (GREEN), refactor (REFACTOR)
+
+## Evidence
+
+- TDD is mandatory per docs/TDD.md
+- Workflow detected from commit patterns
+- Pattern involves creating test files before implementation
+
+---
+id: tacoshell-workflow-feature-development
+trigger: "when implementing a new feature"
+confidence: 0.9
+domain: workflow
+source: repo-analysis
+source_repo: https://github.com/dodoflix/tacoshell
+---
+
+# Tacoshell Workflow Feature Development
+
+## Action
+
+Write tests first, implement feature, update TODO.md and documentation
+
+## Evidence
+
+- Feature implementation workflow frequency: ~8-21x per month
+- Files: ui/src/*, ui/src/components/*, ui/src/hooks/*, packages/*/src/**/*.ts
+- Pattern involves comprehensive unit tests and type definitions
+
+---
+id: tacoshell-workflow-refactoring
+trigger: "when refactoring code"
+confidence: 0.85
+domain: workflow
+source: repo-analysis
+source_repo: https://github.com/dodoflix/tacoshell
+---
+
+# Tacoshell Workflow Refactoring
+
+## Action
+
+Ensure tests pass before refactor, extract shared modules, simplify interfaces, verify tests still pass
+
+## Evidence
+
+- Refactoring workflow frequency: ~3x per month
+- Commit example: 'extract generateRandom/generateCodeChallenge to shared crypto module'
+- Files: packages/ui/src/components/**/*.tsx, packages/ui/src/lib/*.ts
+
+---
+id: tacoshell-workflow-ui-component
+trigger: "when creating a UI component"
+confidence: 0.92
+domain: workflow
+source: repo-analysis
+source_repo: https://github.com/dodoflix/tacoshell
+---
+
+# Tacoshell Workflow UI Component
+
+## Action
+
+Write tests first in __tests__ directory, implement component with props interface, create index.ts barrel export
+
+## Evidence
+
+- UI component workflow frequency: ~10x per month
+- Files: packages/ui/src/components/*/index.ts, packages/ui/src/components/*/*.tsx, packages/ui/src/components/*/__tests__/*.test.tsx
+- All components use Radix UI primitives
+
+---
+id: tacoshell-workflow-rust-module
+trigger: "when adding Rust functionality"
+confidence: 0.88
+domain: workflow
+source: repo-analysis
+source_repo: https://github.com/dodoflix/tacoshell
+---
+
+# Tacoshell Workflow Rust Module
+
+## Action
+
+Write tests in #[cfg(test)] mod tests {} block first, implement with proper error handling (no unwrap/expect), update Cargo.toml
+
+## Evidence
+
+- Rust development workflow frequency: ~6x per month
+- Files: packages/core/src/**/*.rs, Cargo.toml, Cargo.lock
+- Tests must be in same file as production code
+
+---
+id: tacoshell-workflow-tauri-command
+trigger: "when adding desktop functionality via Tauri"
+confidence: 0.85
+domain: workflow
+source: repo-analysis
+source_repo: https://github.com/dodoflix/tacoshell
+---
+
+# Tacoshell Workflow Tauri Command
+
+## Action
+
+Write Rust tests first, implement Tauri command, update capabilities/permissions, write TypeScript tests, create TypeScript service wrapper
+
+## Evidence
+
+- Tauri integration workflow frequency: ~4x per month
+- Files: packages/tauri-app/src-tauri/src/**/*.rs, packages/tauri-app/src-tauri/capabilities/*.json, packages/tauri-app/src/services/*.ts
+
+---
+id: tacoshell-workflow-workspace-fixes
+trigger: "when fixing issues across multiple packages"
+confidence: 0.83
+domain: workflow
+source: repo-analysis
+source_repo: https://github.com/dodoflix/tacoshell
+---
+
+# Tacoshell Workflow Workspace Fixes
+
+## Action
+
+Identify affected packages, update imports/paths consistently, fix configuration issues, test across all packages
+
+## Evidence
+
+- Workspace-wide fixes frequency: ~3x per month
+- Files: packages/*/src/**, packages/*/package.json, packages/*/tsconfig.json
+
+---
+id: tacoshell-security-rules
+trigger: "when working with sensitive data or crypto"
+confidence: 0.95
+domain: security
+source: repo-analysis
+source_repo: https://github.com/dodoflix/tacoshell
+---
+
+# Tacoshell Security Rules
+
+## Action
+
+Never log decrypted vault contents, passwords, or private keys. Never store Master Key on disk. All GitHub data must be AES-256-GCM encrypted. Use SecretString/Zeroizing for sensitive data.
+
+## Evidence
+
+- Security rules documented in docs/SECURITY.md and CLAUDE.md
+- Sensitive data uses SecretString (secrecy) or Zeroizing<T> (zeroize)
+- Vault writes go through storage engine only
+
+---
+id: tacoshell-architecture-separation
+trigger: "when designing cross-layer functionality"
+confidence: 0.95
+domain: architecture
+source: repo-analysis
+source_repo: https://github.com/dodoflix/tacoshell
+---
+
+# Tacoshell Architecture Separation
+
+## Action
+
+Rust core has zero knowledge of UI. UI has zero direct network/filesystem access (goes through Tauri IPC or WASM bridge). Stores never directly import each other.
+
+## Evidence
+
+- Architecture rules documented in docs/ARCHITECTURE.md and CLAUDE.md
+- Clear separation between core (Rust) and UI (TypeScript)
+- All communication via Tauri IPC or WASM bridge
