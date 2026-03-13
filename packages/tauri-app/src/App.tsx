@@ -95,11 +95,7 @@ export default function App() {
         onSubmit={(p) => {
           void handlePassphraseSubmit(p)
         }}
-        {...(passphraseError != null
-          ? { error: passphraseError }
-          : vaultError != null
-            ? { error: vaultError }
-            : {})}
+        error={passphraseError ?? vaultError ?? undefined}
       />
       <div style={{ padding: '2rem' }}>
         <p>Welcome, {user?.login ?? 'user'}!</p>
