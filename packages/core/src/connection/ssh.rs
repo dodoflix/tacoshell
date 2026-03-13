@@ -37,7 +37,8 @@ use secrecy::ExposeSecret;
 use tokio::sync::mpsc;
 
 use crate::profile::types::{ConnectionProfile, HostKeyPolicy, Protocol};
-use russh::keys::PublicKeyBase64;
+// Brings `public_key_bytes()` into scope on `PublicKey` for TOFU comparisons.
+use russh::keys::PublicKeyBase64 as _;
 
 use super::{ConnectionError, Credential, ExecResult};
 
@@ -88,10 +89,22 @@ enum ShellCmd {
 /// session through the [`russh::client::Handle`].
 struct SshClientHandler {
     host: String,
+    port: u16,
     host_key_policy: HostKeyPolicy,
-    /// Shared map of hostname → wire-encoded public-key bytes.
-    /// Written on first connect; compared on subsequent connects.
+    /// Shared map of `"host:port"` → wire-encoded public-key bytes.
+    ///
+    /// Keyed by the full `host:port` pair so that two SSH daemons on the same
+    /// host but different ports are treated as independent servers.
+    /// Written on first connect; compared on subsequent connects within the
+    /// same [`SshAdapter`] lifetime (or across `reconnect()` calls, which
+    /// reuse this [`Arc`]).
     known_keys: Arc<tokio::sync::Mutex<HashMap<String, Vec<u8>>>>,
+}
+
+impl SshClientHandler {
+    fn host_key(&self) -> String {
+        format!("{}:{}", self.host, self.port)
+    }
 }
 
 #[async_trait]
@@ -106,11 +119,12 @@ impl russh::client::Handler for SshClientHandler {
             HostKeyPolicy::AcceptAll => Ok(true),
             HostKeyPolicy::StrictFirstConnect => {
                 let key_bytes = server_public_key.public_key_bytes();
+                let host_key = self.host_key();
                 let mut known = self.known_keys.lock().await;
-                match known.get(&self.host) {
+                match known.get(&host_key) {
                     None => {
                         // Trust on first use — store the key.
-                        known.insert(self.host.clone(), key_bytes);
+                        known.insert(host_key, key_bytes);
                         Ok(true)
                     }
                     Some(stored) if stored == &key_bytes => Ok(true),
@@ -249,6 +263,7 @@ async fn connect_inner(
 
     let handler = SshClientHandler {
         host: profile.host.clone(),
+        port: profile.port,
         host_key_policy,
         known_keys: Arc::clone(&known_keys),
     };
@@ -312,15 +327,15 @@ async fn connect_inner(
                 cmd = shell_rx.recv() => {
                     match cmd {
                         Some(ShellCmd::Data(bytes)) => {
-                            let _ = ch.data(std::io::Cursor::new(bytes)).await;
+                            if ch.data(std::io::Cursor::new(bytes)).await.is_err() {
+                                // Write failure means the channel is broken.
+                                break;
+                            }
                         }
                         Some(ShellCmd::Resize { cols, rows }) => {
-                            let _ = ch.window_change(
-                                cols as u32,
-                                rows as u32,
-                                0,
-                                0,
-                            ).await;
+                            if ch.window_change(cols as u32, rows as u32, 0, 0).await.is_err() {
+                                break;
+                            }
                         }
                         Some(ShellCmd::Close) | None => {
                             let _ = ch.close().await;
@@ -426,6 +441,11 @@ impl TerminalAdapter for SshAdapter {
         let mut exit_code = None;
         let mut ch = channel;
 
+        // Collect output until the channel is fully closed.
+        // We handle `Eof` and `Close` separately: `Eof` signals no more data
+        // from the server but the exit status / close message may still follow;
+        // `Close` (or `None`) means the channel is gone and we stop.
+        let mut got_eof = false;
         loop {
             match ch.wait().await {
                 Some(russh::ChannelMsg::Data { data }) => {
@@ -437,8 +457,21 @@ impl TerminalAdapter for SshAdapter {
                 Some(russh::ChannelMsg::ExitStatus { exit_status }) => {
                     exit_code = Some(exit_status);
                 }
+                Some(russh::ChannelMsg::Eof) => {
+                    got_eof = true;
+                    // Exit status often arrives after Eof. Keep reading until
+                    // we get it or the channel closes.
+                    if exit_code.is_some() {
+                        break;
+                    }
+                }
                 Some(russh::ChannelMsg::Close) | None => break,
                 _ => {}
+            }
+            // If the server sent Eof and we already have an exit status,
+            // there is nothing more to collect.
+            if got_eof && exit_code.is_some() {
+                break;
             }
         }
 
@@ -472,11 +505,13 @@ mod tests {
 
     fn make_handler(
         host: &str,
+        port: u16,
         policy: HostKeyPolicy,
         known_keys: Arc<tokio::sync::Mutex<HashMap<String, Vec<u8>>>>,
     ) -> SshClientHandler {
         SshClientHandler {
             host: host.to_owned(),
+            port,
             host_key_policy: policy,
             known_keys,
         }
@@ -495,7 +530,7 @@ mod tests {
         use russh::client::Handler as _;
 
         let known = fresh_known_keys();
-        let mut handler = make_handler("host.example.com", HostKeyPolicy::StrictFirstConnect, Arc::clone(&known));
+        let mut handler = make_handler("host.example.com", 22, HostKeyPolicy::StrictFirstConnect, Arc::clone(&known));
 
         let key_pair = KeyPair::generate_ed25519().expect("ed25519 keygen failed");
         let pub_key = key_pair.clone_public_key().expect("clone public key failed");
@@ -505,8 +540,8 @@ mod tests {
 
         let stored = known.lock().await;
         assert!(
-            stored.contains_key("host.example.com"),
-            "key should be stored after first connect"
+            stored.contains_key("host.example.com:22"),
+            "key should be stored keyed by host:port after first connect"
         );
     }
 
@@ -520,11 +555,11 @@ mod tests {
         let pub_key = key_pair.clone_public_key().expect("clone public key failed");
 
         // First connect — stores the key.
-        let mut h1 = make_handler("host.example.com", HostKeyPolicy::StrictFirstConnect, Arc::clone(&known));
+        let mut h1 = make_handler("host.example.com", 22, HostKeyPolicy::StrictFirstConnect, Arc::clone(&known));
         h1.check_server_key(&pub_key).await.unwrap();
 
         // Second connect with the SAME key — must be accepted.
-        let mut h2 = make_handler("host.example.com", HostKeyPolicy::StrictFirstConnect, Arc::clone(&known));
+        let mut h2 = make_handler("host.example.com", 22, HostKeyPolicy::StrictFirstConnect, Arc::clone(&known));
         let accepted = h2.check_server_key(&pub_key).await.unwrap();
         assert!(accepted, "same key should be accepted on subsequent connects");
     }
@@ -539,14 +574,14 @@ mod tests {
         let pub1 = key1.clone_public_key().expect("pub1");
 
         // First connect — stores key1.
-        let mut h1 = make_handler("host.example.com", HostKeyPolicy::StrictFirstConnect, Arc::clone(&known));
+        let mut h1 = make_handler("host.example.com", 22, HostKeyPolicy::StrictFirstConnect, Arc::clone(&known));
         h1.check_server_key(&pub1).await.unwrap();
 
         // Second connect with a DIFFERENT key — must be rejected.
         let key2 = KeyPair::generate_ed25519().expect("keygen");
         let pub2 = key2.clone_public_key().expect("pub2");
 
-        let mut h2 = make_handler("host.example.com", HostKeyPolicy::StrictFirstConnect, Arc::clone(&known));
+        let mut h2 = make_handler("host.example.com", 22, HostKeyPolicy::StrictFirstConnect, Arc::clone(&known));
         let result = h2.check_server_key(&pub2).await;
 
         match result {
@@ -571,13 +606,13 @@ mod tests {
             let key2 = KeyPair::generate_ed25519().expect("keygen");
             let pub2 = key2.clone_public_key().expect("pub2");
             known.lock().await.insert(
-                "host.example.com".to_owned(),
+                "host.example.com:22".to_owned(),
                 pub2.public_key_bytes(),
             );
         }
 
         // AcceptAll should ignore the mismatch.
-        let mut h = make_handler("host.example.com", HostKeyPolicy::AcceptAll, known);
+        let mut h = make_handler("host.example.com", 22, HostKeyPolicy::AcceptAll, known);
         let accepted = h.check_server_key(&pub1).await.unwrap();
         assert!(accepted, "AcceptAll must accept any key");
     }
@@ -595,13 +630,35 @@ mod tests {
         let pub_b = key_b.clone_public_key().expect("pub_b");
 
         // Connect to host-a.
-        let mut ha = make_handler("a.example.com", HostKeyPolicy::StrictFirstConnect, Arc::clone(&known));
+        let mut ha = make_handler("a.example.com", 22, HostKeyPolicy::StrictFirstConnect, Arc::clone(&known));
         ha.check_server_key(&pub_a).await.unwrap();
 
         // Connect to host-b (different host, different key) — should succeed.
-        let mut hb = make_handler("b.example.com", HostKeyPolicy::StrictFirstConnect, Arc::clone(&known));
+        let mut hb = make_handler("b.example.com", 22, HostKeyPolicy::StrictFirstConnect, Arc::clone(&known));
         let accepted = hb.check_server_key(&pub_b).await.unwrap();
         assert!(accepted, "different host should be treated independently");
+    }
+
+    #[tokio::test]
+    async fn host_key_tofu_same_host_different_ports_are_independent() {
+        use russh::client::Handler as _;
+
+        let known = fresh_known_keys();
+
+        let key_22 = KeyPair::generate_ed25519().expect("keygen");
+        let pub_22 = key_22.clone_public_key().expect("pub_22");
+
+        let key_2222 = KeyPair::generate_ed25519().expect("keygen");
+        let pub_2222 = key_2222.clone_public_key().expect("pub_2222");
+
+        // Connect on port 22 — stores key_22.
+        let mut h22 = make_handler("host.example.com", 22, HostKeyPolicy::StrictFirstConnect, Arc::clone(&known));
+        h22.check_server_key(&pub_22).await.unwrap();
+
+        // Connect on port 2222 with a DIFFERENT key — must succeed (different server).
+        let mut h2222 = make_handler("host.example.com", 2222, HostKeyPolicy::StrictFirstConnect, Arc::clone(&known));
+        let accepted = h2222.check_server_key(&pub_2222).await.unwrap();
+        assert!(accepted, "same host on different port must be treated as a different server");
     }
 
     // -----------------------------------------------------------------------

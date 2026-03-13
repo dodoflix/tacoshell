@@ -34,7 +34,9 @@ use tacoshell_core::profile::types::ConnectionProfile;
 /// - `USER_PASSWORD=<pass>`   — password for that user
 /// - `PUBLIC_KEY=<pub_key>`   — inject an authorized key
 const SSHD_IMAGE: &str = "lscr.io/linuxserver/openssh-server";
-const SSHD_TAG: &str = "latest";
+/// Pinned to a specific digest for deterministic, non-breaking test runs.
+/// Update this tag when intentionally upgrading the test image.
+const SSHD_TAG: &str = "version-9.6_p1-r1-ls175";
 const SSHD_PORT: u16 = 2222;
 
 const TEST_USER: &str = "testuser";
@@ -113,7 +115,7 @@ async fn start_sshd_pubkey(
 async fn ssh_password_auth_connect_succeeds() {
     let (_container, profile) = start_sshd_password().await;
 
-    let credential = Credential::Password(SecretString::new(TEST_PASSWORD.to_owned().into()));
+    let credential = Credential::Password(SecretString::new(TEST_PASSWORD.to_owned()));
 
     let mut adapter = SshAdapter::connect(&profile, credential)
         .await
@@ -127,7 +129,7 @@ async fn ssh_password_auth_connect_succeeds() {
 async fn ssh_password_auth_wrong_password_fails() {
     let (_container, profile) = start_sshd_password().await;
 
-    let credential = Credential::Password(SecretString::new("wrongpassword".to_owned().into()));
+    let credential = Credential::Password(SecretString::new("wrongpassword".to_owned()));
 
     let result = SshAdapter::connect(&profile, credential).await;
     assert!(
@@ -211,7 +213,7 @@ async fn ssh_pubkey_auth_rsa_succeeds() {
 #[tokio::test]
 async fn ssh_tofu_first_connect_stores_host_key() {
     let (_container, profile) = start_sshd_password().await;
-    let credential = Credential::Password(SecretString::new(TEST_PASSWORD.to_owned().into()));
+    let credential = Credential::Password(SecretString::new(TEST_PASSWORD.to_owned()));
 
     // First connect — should succeed and store the host key.
     let mut adapter = SshAdapter::connect(&profile, credential.clone())
@@ -223,21 +225,23 @@ async fn ssh_tofu_first_connect_stores_host_key() {
 }
 
 #[tokio::test]
-async fn ssh_tofu_same_server_second_connect_succeeds() {
+async fn ssh_tofu_reconnect_with_same_host_key_succeeds() {
     let (_container, profile) = start_sshd_password().await;
-    let credential = Credential::Password(SecretString::new(TEST_PASSWORD.to_owned().into()));
+    let credential = Credential::Password(SecretString::new(TEST_PASSWORD.to_owned()));
 
-    // First connect.
-    let mut first = SshAdapter::connect(&profile, credential.clone())
+    // First connect — stores the host key in the adapter's known_keys store.
+    let mut adapter = SshAdapter::connect(&profile, credential)
         .await
         .expect("first connect");
-    first.disconnect().await.ok();
 
-    // Second connect to the same server — same host key, must succeed.
-    let mut second = SshAdapter::connect(&profile, credential)
-        .await
-        .expect("second connect with same host key should succeed");
-    second.disconnect().await.ok();
+    assert!(adapter.is_alive());
+
+    // reconnect() reuses the same known_keys store, so the host key must be
+    // verified and must match — this is what validates TOFU persistence.
+    adapter.reconnect().await.expect("reconnect with same host key should succeed");
+
+    assert!(adapter.is_alive(), "adapter should be alive after reconnect");
+    adapter.disconnect().await.ok();
 }
 
 // ---------------------------------------------------------------------------
@@ -247,7 +251,7 @@ async fn ssh_tofu_same_server_second_connect_succeeds() {
 #[tokio::test]
 async fn ssh_exec_returns_command_output() {
     let (_container, profile) = start_sshd_password().await;
-    let credential = Credential::Password(SecretString::new(TEST_PASSWORD.to_owned().into()));
+    let credential = Credential::Password(SecretString::new(TEST_PASSWORD.to_owned()));
 
     let adapter = SshAdapter::connect(&profile, credential)
         .await
@@ -265,7 +269,7 @@ async fn ssh_exec_returns_command_output() {
 #[tokio::test]
 async fn ssh_exec_nonzero_exit_code() {
     let (_container, profile) = start_sshd_password().await;
-    let credential = Credential::Password(SecretString::new(TEST_PASSWORD.to_owned().into()));
+    let credential = Credential::Password(SecretString::new(TEST_PASSWORD.to_owned()));
 
     let adapter = SshAdapter::connect(&profile, credential)
         .await
@@ -278,7 +282,7 @@ async fn ssh_exec_nonzero_exit_code() {
 #[tokio::test]
 async fn ssh_exec_captures_stderr() {
     let (_container, profile) = start_sshd_password().await;
-    let credential = Credential::Password(SecretString::new(TEST_PASSWORD.to_owned().into()));
+    let credential = Credential::Password(SecretString::new(TEST_PASSWORD.to_owned()));
 
     let adapter = SshAdapter::connect(&profile, credential)
         .await
@@ -299,7 +303,7 @@ async fn ssh_exec_captures_stderr() {
 #[tokio::test]
 async fn ssh_input_output_stream_round_trip() {
     let (_container, profile) = start_sshd_password().await;
-    let credential = Credential::Password(SecretString::new(TEST_PASSWORD.to_owned().into()));
+    let credential = Credential::Password(SecretString::new(TEST_PASSWORD.to_owned()));
 
     let mut adapter = SshAdapter::connect(&profile, credential)
         .await
@@ -344,7 +348,7 @@ async fn ssh_input_output_stream_round_trip() {
 #[tokio::test]
 async fn ssh_output_stream_returns_none_on_second_call() {
     let (_container, profile) = start_sshd_password().await;
-    let credential = Credential::Password(SecretString::new(TEST_PASSWORD.to_owned().into()));
+    let credential = Credential::Password(SecretString::new(TEST_PASSWORD.to_owned()));
 
     let mut adapter = SshAdapter::connect(&profile, credential)
         .await
@@ -364,7 +368,7 @@ async fn ssh_output_stream_returns_none_on_second_call() {
 #[tokio::test]
 async fn ssh_resize_does_not_error() {
     let (_container, profile) = start_sshd_password().await;
-    let credential = Credential::Password(SecretString::new(TEST_PASSWORD.to_owned().into()));
+    let credential = Credential::Password(SecretString::new(TEST_PASSWORD.to_owned()));
 
     let adapter = SshAdapter::connect(&profile, credential)
         .await
@@ -383,7 +387,7 @@ async fn ssh_resize_does_not_error() {
 #[tokio::test]
 async fn ssh_is_alive_false_after_disconnect() {
     let (_container, profile) = start_sshd_password().await;
-    let credential = Credential::Password(SecretString::new(TEST_PASSWORD.to_owned().into()));
+    let credential = Credential::Password(SecretString::new(TEST_PASSWORD.to_owned()));
 
     let mut adapter = SshAdapter::connect(&profile, credential)
         .await
@@ -411,7 +415,7 @@ async fn ssh_keepalive_configured_does_not_drop_idle_connection() {
         ssh.keepalive_secs = Some(1);
     }
 
-    let credential = Credential::Password(SecretString::new(TEST_PASSWORD.to_owned().into()));
+    let credential = Credential::Password(SecretString::new(TEST_PASSWORD.to_owned()));
 
     let adapter = SshAdapter::connect(&profile, credential)
         .await
