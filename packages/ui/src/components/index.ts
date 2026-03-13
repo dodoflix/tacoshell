@@ -1,1 +1,12 @@
 // Component exports added in Phase 1.6
+export { Button } from './Button'
+export { Input } from './Input'
+export { Modal } from './Modal'
+export { Panel } from './Panel'
+export { SplitPane } from './SplitPane'
+export { TabBar } from './TabBar'
+export { StatusBadge } from './StatusBadge'
+export { Sidebar } from './Sidebar'
+export { TreeView } from './TreeView'
+export type { TreeNode } from './TreeView'
+export { ComponentCatalog } from './ComponentCatalog'

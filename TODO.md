@@ -61,16 +61,16 @@ Legend: `[ ]` = not started · `[~]` = in progress · `[x]` = done
 
 ### 1.6 Design System (`packages/ui/src/components/`)
 
-- [ ] Button — write tests → implement (primary, secondary, ghost, icon, loading)
-- [ ] Input — write tests → implement (text, password with reveal, search)
-- [ ] Modal — write tests → implement (focus trap, keyboard dismiss, ARIA)
-- [ ] Panel — write tests → implement
-- [ ] SplitPane — write tests → implement (drag handle, ratio prop)
-- [ ] TabBar — write tests → implement (tabs, close, active indicator)
-- [ ] StatusBadge — write tests → implement (connected, error, loading, disconnected)
-- [ ] Sidebar shell — write tests → implement
-- [ ] TreeView — write tests → implement
-- [ ] Storybook (or equivalent) for component visual review
+- [x] Button — write tests → implement (primary, secondary, ghost, icon, loading)
+- [x] Input — write tests → implement (text, password with reveal, search)
+- [x] Modal — write tests → implement (focus trap, keyboard dismiss, ARIA)
+- [x] Panel — write tests → implement
+- [x] SplitPane — write tests → implement (drag handle, ratio prop)
+- [x] TabBar — write tests → implement (tabs, close, active indicator)
+- [x] StatusBadge — write tests → implement (connected, error, loading, disconnected)
+- [x] Sidebar shell — write tests → implement
+- [x] TreeView — write tests → implement
+- [x] Storybook (or equivalent) for component visual review
 
 ### 1.7 Auth Feature (`packages/ui/src/features/auth/`)
 
