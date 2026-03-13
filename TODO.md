@@ -54,10 +54,10 @@ Legend: `[ ]` = not started · `[~]` = in progress · `[x]` = done
 
 ### 1.5 Profile Manager (`packages/core/src/profile/`)
 
-- [ ] Define types in `types.rs`: `ConnectionProfile`, `SshKey`, `Password`, `KubeConfigItem`
-- [ ] Write failing tests for `manager.rs` (CRUD operations)
-- [ ] Implement `manager.rs`
-- [ ] Test: create profile → save → reload → compare
+- [x] Define types in `types.rs`: `ConnectionProfile`, `SshKey`, `Password`, `KubeConfigItem`
+- [x] Write failing tests for `manager.rs` (CRUD operations)
+- [x] Implement `manager.rs`
+- [x] Test: create profile → save → reload → compare
 
 ### 1.6 Design System (`packages/ui/src/components/`)
 
