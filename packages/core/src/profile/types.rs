@@ -18,19 +18,14 @@ pub enum Protocol {
 }
 
 /// SSH host key verification policy.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
 #[serde(rename_all = "snake_case")]
 pub enum HostKeyPolicy {
     /// Trust on first connection, reject changes (TOFU). Recommended default.
+    #[default]
     StrictFirstConnect,
     /// Accept any host key without verification. User must explicitly opt in.
     AcceptAll,
-}
-
-impl Default for HostKeyPolicy {
-    fn default() -> Self {
-        HostKeyPolicy::StrictFirstConnect
-    }
 }
 
 /// FTP connection security mode.

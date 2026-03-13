@@ -107,15 +107,15 @@ Legend: `[ ]` = not started · `[~]` = in progress · `[x]` = done
 
 ### 2.1 SSH Adapter (`packages/core/src/connection/ssh.rs`)
 
-- [ ] Write failing tests for password authentication
-- [ ] Implement password auth
-- [ ] Write failing tests for public key authentication (Ed25519, RSA)
-- [ ] Implement public key auth
-- [ ] Write failing tests for SSH agent forwarding
-- [ ] Implement SSH agent forwarding (desktop only)
-- [ ] Write failing tests for host key verification (TOFU policy)
-- [ ] Implement TOFU host key verification
-- [ ] Implement keepalive (configurable interval)
+- [x] Write failing tests for password authentication
+- [x] Implement password auth
+- [x] Write failing tests for public key authentication (Ed25519, RSA)
+- [x] Implement public key auth
+- [x] Write failing tests for SSH agent forwarding
+- [x] Implement SSH agent forwarding (desktop only)
+- [x] Write failing tests for host key verification (TOFU policy)
+- [x] Implement TOFU host key verification
+- [x] Implement keepalive (configurable interval)
 - [ ] Write failing integration tests (testcontainers + openssh-server)
 - [ ] Integration tests pass
 
