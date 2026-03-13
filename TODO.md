@@ -44,13 +44,13 @@ Legend: `[ ]` = not started · `[~]` = in progress · `[x]` = done
 
 ### 1.4 GitHub Storage Engine (`packages/core/src/storage/`)
 
-- [ ] Write failing tests for `github.rs` (octocrab integration, wiremock mocks)
-- [ ] Implement `github.rs` — repo create, file read, file write
-- [ ] Write failing tests for `sync.rs` — optimistic locking, SHA mismatch flow
-- [ ] Implement `sync.rs` — sync protocol with conflict resolution
-- [ ] Write failing tests for `cache.rs` — local cache read/write
-- [ ] Implement `cache.rs`
-- [ ] Integration test: full vault create → modify → sync → re-load cycle
+- [x] Write failing tests for `github.rs` (octocrab integration, wiremock mocks)
+- [x] Implement `github.rs` — repo create, file read, file write
+- [x] Write failing tests for `sync.rs` — optimistic locking, SHA mismatch flow
+- [x] Implement `sync.rs` — sync protocol with conflict resolution
+- [x] Write failing tests for `cache.rs` — local cache read/write
+- [x] Implement `cache.rs`
+- [x] Integration test: full vault create → modify → sync → re-load cycle
 
 ### 1.5 Profile Manager (`packages/core/src/profile/`)
 
