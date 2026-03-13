@@ -1,0 +1,30 @@
+# Advisories that come from transitive dependencies we do not control directly
+# (primarily tauri's GTK/glib stack and indirect unmaintained crates).
+#
+# Review schedule: re-evaluate every entry when bumping major dependency versions
+# (tauri, kube, reqwest) or at least once per quarter.
+# TODO: remove each ignore once the upstream crate ships a fixed release.
+
+[advisories]
+ignore = [
+    # glib v0.18.5 — unsoundness in Iterator/DoubleEndedIterator for VariantStrIter
+    # Path: tauri → wry → webkit2gtk → glib.
+    # No fix version available in glib-rs 0.18 series; tracked upstream at
+    # https://gitlab.gnome.org/GNOME/glib-rs/-/issues.
+    # TODO: remove when tauri upgrades to a glib-rs release that addresses this.
+    { id = "RUSTSEC-2024-0429", reason = "transitive dep via tauri/wry/webkit2gtk; no upstream fix available in the 0.18 series" },
+
+    # unic-* crates (0.9.0) — unmaintained, pulled in by kube / kube-runtime.
+    # No known vulnerabilities; upstream has been dormant for years.
+    # TODO: remove when kube replaces these with maintained alternatives.
+    { id = "RUSTSEC-2025-0075", reason = "unic-char-range: transitive dep via kube; unmaintained but no known vulnerability" },
+    { id = "RUSTSEC-2025-0080", reason = "unic-common: transitive dep via kube; unmaintained but no known vulnerability" },
+    { id = "RUSTSEC-2025-0081", reason = "unic-char-property: transitive dep via kube; unmaintained but no known vulnerability" },
+    { id = "RUSTSEC-2025-0098", reason = "unic-ucd-version: transitive dep via kube; unmaintained but no known vulnerability" },
+    { id = "RUSTSEC-2025-0100", reason = "unic-ucd-ident: transitive dep via kube; unmaintained but no known vulnerability" },
+
+    # rustls-pemfile v2.2.0 — unmaintained, pulled in by reqwest/octocrab.
+    # No known vulnerability; functionality has been absorbed into rustls 0.23+.
+    # TODO: remove when reqwest bumps to a rustls release that drops this dep.
+    { id = "RUSTSEC-2025-0134", reason = "rustls-pemfile: transitive dep via reqwest; unmaintained but no known vulnerability" },
+]

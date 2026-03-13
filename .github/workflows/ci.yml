@@ -32,6 +32,12 @@ jobs:
       - name: Cache Rust dependencies
         uses: Swatinem/rust-cache@v2
 
+      - name: Install system dependencies (GTK / WebKit)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev \
+            librsvg2-dev patchelf libssl-dev pkg-config
+
       - name: cargo fmt --check
         run: cargo fmt --all -- --check
 
@@ -79,6 +85,13 @@ jobs:
 
       - name: Cache Rust dependencies
         uses: Swatinem/rust-cache@v2
+
+      - name: Install system dependencies (GTK / WebKit — Linux only)
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev \
+            librsvg2-dev patchelf libssl-dev pkg-config
 
       - name: cargo test
         run: cargo test --workspace --lib --bins
@@ -138,8 +151,8 @@ jobs:
       - name: Install wasm-pack
         run: cargo install wasm-pack --locked
 
-      - name: wasm-pack test (headless Chrome)
-        run: wasm-pack test packages/core-wasm --headless --chrome
+      - name: wasm-pack test (headless Node)
+        run: wasm-pack test packages/core-wasm --node
 
       - name: wasm-pack build
         run: wasm-pack build packages/core-wasm --target web
