@@ -87,7 +87,7 @@ function TreeNodeItem({ node, depth, expandedIds, onToggle, onNodeClick }: TreeN
               depth={depth + 1}
               expandedIds={expandedIds}
               onToggle={onToggle}
-              onNodeClick={onNodeClick}
+              {...(onNodeClick ? { onNodeClick } : {})}
             />
           ))}
         </ul>
@@ -120,7 +120,7 @@ export function TreeView({ nodes, onNodeClick, className }: TreeViewProps) {
           depth={0}
           expandedIds={expandedIds}
           onToggle={handleToggle}
-          onNodeClick={onNodeClick}
+          {...(onNodeClick ? { onNodeClick } : {})}
         />
       ))}
     </ul>

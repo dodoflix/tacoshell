@@ -15,9 +15,11 @@ interface UseGitHubOAuthReturn {
 }
 
 function generateRandom(length: number): string {
-  const array = new Uint8Array(length)
+  // Use ceil(length/2) bytes so that hex encoding yields exactly `length` hex chars,
+  // preserving the full entropy of every byte.
+  const array = new Uint8Array(Math.ceil(length / 2))
   crypto.getRandomValues(array)
-  return Array.from(array, (byte) => byte.toString(36).padStart(2, '0'))
+  return Array.from(array, (byte) => byte.toString(16).padStart(2, '0'))
     .join('')
     .slice(0, length)
 }
