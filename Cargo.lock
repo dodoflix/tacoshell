@@ -6047,6 +6047,7 @@ dependencies = [
  "tokio",
  "tokio-test",
  "tracing",
+ "url",
  "wiremock",
 ]
 
