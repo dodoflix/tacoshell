@@ -77,11 +77,9 @@ Legend: `[ ]` = not started · `[~]` = in progress · `[x]` = done
 - [x] Write failing tests for `useAuthStore`
 - [x] Implement `useAuthStore` (token, user profile, auth status)
 - [x] Implement GitHub OAuth PKCE flow (web)
-- [ ] Integrate Tauri OAuth plugin (desktop)
 - [x] Implement `GitHubLoginButton`
 - [x] Implement `VaultPassphraseModal` (first-time setup + unlock)
 - [x] Implement `SessionGuard` HOC
-- [ ] E2E test: full login flow (web mock + desktop)
 
 ### 1.8 Vault Store (`packages/ui/src/stores/useVaultStore.ts`)
 
@@ -94,6 +92,7 @@ Legend: `[ ]` = not started · `[~]` = in progress · `[x]` = done
 - [ ] Tauri v2 project setup
 - [ ] Link `packages/ui` as a workspace dependency
 - [ ] Implement Tauri commands: `create_vault`, `load_vault`, `save_vault`, `get_user_profile`
+- [ ] Integrate Tauri OAuth plugin (desktop) ← moved from 1.7
 - [ ] App runs and GitHub OAuth completes on desktop (macOS)
 - [ ] App runs on Windows
 - [ ] App runs on Linux
@@ -156,6 +155,7 @@ Legend: `[ ]` = not started · `[~]` = in progress · `[x]` = done
 
 - [ ] Setup: GitHub OAuth mock server for CI
 - [ ] Setup: testcontainers SSH server for E2E
+- [ ] E2E test: full login flow (web mock + desktop) ← moved from 1.7
 - [ ] E2E test: login → create SSH profile → connect → execute command → see output
 - [ ] E2E test: split terminal → two simultaneous SSH connections
 - [ ] E2E test: close tab → pane merges
