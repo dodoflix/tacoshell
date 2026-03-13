@@ -1,7 +1,7 @@
 import React, { useState } from 'react'
-import { Modal } from '@/components/Modal'
-import { Input } from '@/components/Input'
-import { Button } from '@/components/Button'
+import { Modal } from '../../components/Modal'
+import { Input } from '../../components/Input'
+import { Button } from '../../components/Button'
 
 export type VaultPassphraseMode = 'create' | 'unlock'
 

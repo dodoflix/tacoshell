@@ -1,5 +1,5 @@
 import React from 'react'
-import { Button } from '@/components/Button'
+import { Button } from '../../components/Button'
 import { useGitHubOAuth } from './useGitHubOAuth'
 
 interface GitHubLoginButtonProps {

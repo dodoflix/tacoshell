@@ -1,5 +1,5 @@
 import { render, screen, act } from '@testing-library/react'
-import { useAuthStore } from '@/stores/useAuthStore'
+import { useAuthStore } from '../../../stores/useAuthStore'
 import { SessionGuard } from '../SessionGuard'
 
 beforeEach(() => {

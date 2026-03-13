@@ -1,5 +1,5 @@
 import React, { forwardRef, useId, useState } from 'react'
-import { cn } from '@/lib/cn'
+import { cn } from '../../lib/cn'
 
 interface InputProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, 'type'> {
   variant?: 'text' | 'password' | 'search'
