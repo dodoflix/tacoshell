@@ -1,0 +1,606 @@
+# Instincts generated from https://github.com/dodoflix/tacoshell
+# Generated: 2026-03-13T18:31:03.376Z
+# Version: 2.0
+
+---
+id: tacoshell-commit-conventional
+trigger: "when writing a commit message"
+confidence: 0.85
+domain: git
+source: repo-analysis
+source_repo: https://github.com/dodoflix/tacoshell
+---
+
+# Tacoshell Commit Conventional
+
+## Action
+
+Use conventional commit format with prefixes: feat, fix, docs, chore
+
+## Evidence
+
+- 35 commits analyzed
+- Detected conventional commit pattern
+- Examples: feat: complete Phase 1.9 desktop OAuth, fix code quality issues across codebase, fix: replace @/ path aliases with relative imports in packages/ui
+
+---
+id: tacoshell-commit-length
+trigger: "when writing a commit message"
+confidence: 0.6
+domain: git
+source: repo-analysis
+source_repo: https://github.com/dodoflix/tacoshell
+---
+
+# Tacoshell Commit Length
+
+## Action
+
+Write moderate-length commit messages (~50 characters)
+
+## Evidence
+
+- Average commit message length: 61 chars
+- Based on 35 commits
+
+---
+id: tacoshell-naming-files
+trigger: "when creating a new file"
+confidence: 0.8
+domain: code-style
+source: repo-analysis
+source_repo: https://github.com/dodoflix/tacoshell
+---
+
+# Tacoshell Naming Files
+
+## Action
+
+Use camelCase naming convention
+
+## Evidence
+
+- Analyzed file naming patterns in repository
+- Dominant pattern: camelCase
+
+---
+id: tacoshell-import-relative
+trigger: "when importing modules"
+confidence: 0.75
+domain: code-style
+source: repo-analysis
+source_repo: https://github.com/dodoflix/tacoshell
+---
+
+# Tacoshell Import Relative
+
+## Action
+
+Use relative imports for project files
+
+## Evidence
+
+- Import analysis shows relative import pattern
+- Example: import { x } from '../lib/x'
+
+---
+id: tacoshell-export-style
+trigger: "when exporting from a module"
+confidence: 0.7
+domain: code-style
+source: repo-analysis
+source_repo: https://github.com/dodoflix/tacoshell
+---
+
+# Tacoshell Export Style
+
+## Action
+
+Prefer mixed exports
+
+## Evidence
+
+- Export pattern analysis
+- Dominant style: mixed
+
+---
+id: tacoshell-test-framework
+trigger: "when writing tests"
+confidence: 0.9
+domain: testing
+source: repo-analysis
+source_repo: https://github.com/dodoflix/tacoshell
+---
+
+# Tacoshell Test Framework
+
+## Action
+
+Use vitest as the test framework
+
+## Evidence
+
+- Test framework detected: vitest
+- File pattern: *.test.tsx
+
+---
+id: tacoshell-test-naming
+trigger: "when creating a test file"
+confidence: 0.85
+domain: testing
+source: repo-analysis
+source_repo: https://github.com/dodoflix/tacoshell
+---
+
+# Tacoshell Test Naming
+
+## Action
+
+Name test files using the pattern: *.test.tsx
+
+## Evidence
+
+- File pattern: *.test.tsx
+- Consistent across test files
+
+---
+id: tacoshell-test-mocking
+trigger: "when mocking dependencies in tests"
+confidence: 0.75
+domain: testing
+source: repo-analysis
+source_repo: https://github.com/dodoflix/tacoshell
+---
+
+# Tacoshell Test Mocking
+
+## Action
+
+Use msw for mocking
+
+## Evidence
+
+- Mocking pattern detected: msw
+- Consistent across test files
+
+---
+id: tacoshell-test-types
+trigger: "when planning tests for a feature"
+confidence: 0.7
+domain: testing
+source: repo-analysis
+source_repo: https://github.com/dodoflix/tacoshell
+---
+
+# Tacoshell Test Types
+
+## Action
+
+Write unit, integration tests to match project standards
+
+## Evidence
+
+- Test types detected: unit, integration
+- Coverage config: yes
+
+---
+id: tacoshell-workflow-database-migration
+trigger: "when modifying the database schema or adding tables"
+confidence: 0.65
+domain: workflow
+source: repo-analysis
+source_repo: https://github.com/dodoflix/tacoshell
+---
+
+# Tacoshell Workflow Database Migration
+
+## Action
+
+Follow the database-migration workflow:
+1. Create migration file
+2. Update schema definitions
+3. Generate/update types
+
+## Evidence
+
+- Workflow detected from commit patterns
+- Frequency: ~3x per month
+- Files: migrations/*, **/schema.*
+
+---
+id: tacoshell-workflow-feature-development
+trigger: "when implementing a new feature"
+confidence: 0.9
+domain: workflow
+source: repo-analysis
+source_repo: https://github.com/dodoflix/tacoshell
+---
+
+# Tacoshell Workflow Feature Development
+
+## Action
+
+Follow the feature-development workflow:
+1. Add feature implementation
+2. Add tests for feature
+3. Update documentation
+
+## Evidence
+
+- Workflow detected from commit patterns
+- Frequency: ~22x per month
+- Files: ui/src/*, ui/src/components/*, ui/src/hooks/*
+
+---
+id: tacoshell-workflow-phase-completion-workflow
+trigger: "when doing phase completion workflow"
+confidence: 0.9
+domain: workflow
+source: repo-analysis
+source_repo: https://github.com/dodoflix/tacoshell
+---
+
+# Tacoshell Workflow Phase Completion Workflow
+
+## Action
+
+Follow the phase-completion-workflow workflow:
+1. Implement core functionality in appropriate packages
+2. Add comprehensive test coverage (unit tests with __tests__ directories)
+3. Update TODO.md with phase completion status
+4. Update configuration files (Cargo.toml, package.json, etc.)
+5. Ensure all tests pass with specific count mentioned in commit
+
+## Evidence
+
+- Workflow detected from commit patterns
+- Frequency: ~9x per month
+- Files: TODO.md, packages/*/src/**/*.ts, packages/*/src/**/*.rs
+
+---
+id: tacoshell-workflow-rust-package-addition
+trigger: "when doing rust package addition"
+confidence: 0.7
+domain: workflow
+source: repo-analysis
+source_repo: https://github.com/dodoflix/tacoshell
+---
+
+# Tacoshell Workflow Rust Package Addition
+
+## Action
+
+Follow the rust-package-addition workflow:
+1. Create new Cargo.toml for the crate
+2. Add crate to workspace Cargo.toml
+3. Update Cargo.lock
+4. Create src/lib.rs and module files
+5. Add workspace dependencies in Cargo.workspace.toml
+
+## Evidence
+
+- Workflow detected from commit patterns
+- Frequency: ~4x per month
+- Files: Cargo.toml, Cargo.lock, Cargo.workspace.toml
+
+---
+id: tacoshell-workflow-ui-component-implementation
+trigger: "when doing ui component implementation"
+confidence: 0.9
+domain: workflow
+source: repo-analysis
+source_repo: https://github.com/dodoflix/tacoshell
+---
+
+# Tacoshell Workflow Ui Component Implementation
+
+## Action
+
+Follow the ui-component-implementation workflow:
+1. Create component file in packages/ui/src/components/ComponentName/
+2. Implement component with proper TypeScript types
+3. Add comprehensive test file in __tests__ directory
+4. Create index.ts export file
+5. Update main components/index.ts
+
+## Evidence
+
+- Workflow detected from commit patterns
+- Frequency: ~10x per month
+- Files: packages/ui/src/components/*/Component.tsx, packages/ui/src/components/*/__tests__/Component.test.tsx, packages/ui/src/components/*/index.ts
+
+---
+id: tacoshell-workflow-tauri-desktop-integration
+trigger: "when doing tauri desktop integration"
+confidence: 0.65
+domain: workflow
+source: repo-analysis
+source_repo: https://github.com/dodoflix/tacoshell
+---
+
+# Tacoshell Workflow Tauri Desktop Integration
+
+## Action
+
+Follow the tauri-desktop-integration workflow:
+1. Update Tauri Rust commands in src-tauri/src/commands/
+2. Update Tauri configuration files (capabilities, schemas)
+3. Implement or update TypeScript service layer
+4. Add tests for service integration
+5. Update Cargo.toml and lock files
+
+## Evidence
+
+- Workflow detected from commit patterns
+- Frequency: ~3x per month
+- Files: packages/tauri-app/src-tauri/src/commands/*.rs, packages/tauri-app/src-tauri/capabilities/default.json, packages/tauri-app/src-tauri/gen/schemas/*.json
+
+---
+id: tacoshell-workflow-configuration-and-tooling-setup
+trigger: "when doing configuration and tooling setup"
+confidence: 0.65
+domain: workflow
+source: repo-analysis
+source_repo: https://github.com/dodoflix/tacoshell
+---
+
+# Tacoshell Workflow Configuration And Tooling Setup
+
+## Action
+
+Follow the configuration-and-tooling-setup workflow:
+1. Update workspace configuration (pnpm-workspace.yaml, tsconfig)
+2. Configure linting and formatting (ESLint, Prettier, rustfmt)
+3. Setup CI/CD workflows
+4. Configure package.json files across workspace
+5. Add or update gitignore and editor config
+
+## Evidence
+
+- Workflow detected from commit patterns
+- Frequency: ~3x per month
+- Files: pnpm-workspace.yaml, tsconfig.base.json, eslint.config.js
+
+---
+id: tacoshell-conventional-commit-format
+trigger: "When writing a commit message"
+confidence: 0.9
+domain: git
+source: repo-analysis
+source_repo: dodoflix/tacoshell
+---
+
+# Tacoshell Conventional Commit Format
+
+## Action
+
+Use conventional commit format with prefixes: feat, fix, docs, chore, ci
+
+## Evidence
+
+- All commits follow conventional format
+- Examples: 'feat: complete Phase 1.9 desktop OAuth'
+- 'fix: replace @/ path aliases with relative imports'
+
+---
+id: tacoshell-relative-imports
+trigger: "When importing modules in packages/ui"
+confidence: 0.85
+domain: code-style
+source: repo-analysis
+source_repo: dodoflix/tacoshell
+---
+
+# Tacoshell Relative Imports
+
+## Action
+
+Use relative imports instead of @/ path aliases
+
+## Evidence
+
+- Commit: 'fix: replace @/ path aliases with relative imports in packages/ui'
+- Import style marked as 'relative'
+
+---
+id: tacoshell-camelcase-files
+trigger: "When creating new TypeScript files"
+confidence: 0.8
+domain: code-style
+source: repo-analysis
+source_repo: dodoflix/tacoshell
+---
+
+# Tacoshell Camelcase Files
+
+## Action
+
+Name files using camelCase convention
+
+## Evidence
+
+- Naming conventions show files: camelCase
+- Pattern consistent across codebase
+
+---
+id: tacoshell-vitest-testing
+trigger: "When writing tests"
+confidence: 0.9
+domain: testing
+source: repo-analysis
+source_repo: dodoflix/tacoshell
+---
+
+# Tacoshell Vitest Testing
+
+## Action
+
+Use vitest framework with *.test.tsx pattern and msw for mocking
+
+## Evidence
+
+- Testing framework: vitest
+- File pattern: *.test.tsx
+- Mocking style: msw
+
+---
+id: tacoshell-phase-completion
+trigger: "When completing a numbered development phase"
+confidence: 0.95
+domain: workflow
+source: repo-analysis
+source_repo: dodoflix/tacoshell
+---
+
+# Tacoshell Phase Completion
+
+## Action
+
+Update TODO.md, implement in packages, add tests in __tests__ directories, update Cargo.toml/package.json
+
+## Evidence
+
+- Phase completion workflow frequency: 9
+- Pattern involves TODO.md, packages/*, __tests__
+- Commit examples show phase numbering
+
+---
+id: tacoshell-rust-crate-addition
+trigger: "When adding new core functionality as separate crate"
+confidence: 0.88
+domain: workflow
+source: repo-analysis
+source_repo: dodoflix/tacoshell
+---
+
+# Tacoshell Rust Crate Addition
+
+## Action
+
+Create Cargo.toml, add to workspace, update lock, create src/lib.rs, add workspace dependencies
+
+## Evidence
+
+- Rust package addition workflow frequency: 4
+- Files involved: Cargo.toml, Cargo.lock, packages/*/src/lib.rs
+
+---
+id: tacoshell-ui-component-structure
+trigger: "When adding new UI component"
+confidence: 0.92
+domain: workflow
+source: repo-analysis
+source_repo: dodoflix/tacoshell
+---
+
+# Tacoshell Ui Component Structure
+
+## Action
+
+Create in packages/ui/src/components/ComponentName/ with Component.tsx, __tests__/Component.test.tsx, index.ts
+
+## Evidence
+
+- UI component workflow frequency: 10
+- Structure: Component.tsx, __tests__, index.ts exports
+
+---
+id: tacoshell-tauri-integration
+trigger: "When implementing desktop-specific features"
+confidence: 0.87
+domain: workflow
+source: repo-analysis
+source_repo: dodoflix/tacoshell
+---
+
+# Tacoshell Tauri Integration
+
+## Action
+
+Update src-tauri/src/commands/, capabilities/schemas, TypeScript services, add service tests
+
+## Evidence
+
+- Tauri integration workflow frequency: 3
+- Files: commands/*.rs, capabilities, services/*Service.ts
+
+---
+id: tacoshell-monorepo-packages
+trigger: "When organizing code in monorepo"
+confidence: 0.85
+domain: architecture
+source: repo-analysis
+source_repo: dodoflix/tacoshell
+---
+
+# Tacoshell Monorepo Packages
+
+## Action
+
+Use packages/ directory with separate package.json, tsconfig.json for each package
+
+## Evidence
+
+- Folder structure type: monorepo
+- Config files show packages/*/package.json pattern
+
+---
+id: tacoshell-try-catch-errors
+trigger: "When handling errors"
+confidence: 0.75
+domain: code-style
+source: repo-analysis
+source_repo: dodoflix/tacoshell
+---
+
+# Tacoshell Try Catch Errors
+
+## Action
+
+Use try-catch blocks without custom error classes or global handlers
+
+## Evidence
+
+- Error handling style: try-catch
+- No custom error classes or boundaries configured
+
+---
+id: tacoshell-mixed-exports
+trigger: "When exporting from modules"
+confidence: 0.7
+domain: code-style
+source: repo-analysis
+source_repo: dodoflix/tacoshell
+---
+
+# Tacoshell Mixed Exports
+
+## Action
+
+Use mixed export style (both default and named exports as appropriate)
+
+## Evidence
+
+- Export style marked as mixed
+- Pattern seen across TypeScript files
+
+---
+id: tacoshell-tooling-setup
+trigger: "When setting up project configuration"
+confidence: 0.83
+domain: workflow
+source: repo-analysis
+source_repo: dodoflix/tacoshell
+---
+
+# Tacoshell Tooling Setup
+
+## Action
+
+Configure pnpm workspace, tsconfig, ESLint, Prettier, rustfmt, and CI workflows
+
+## Evidence
+
+- Configuration workflow frequency: 3
+- Files: pnpm-workspace.yaml, eslint.config.js, .github/workflows/*.yml
+
