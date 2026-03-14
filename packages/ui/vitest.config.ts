@@ -8,7 +8,7 @@ export default defineConfig({
     alias: { '@': resolve(__dirname, 'src') },
   },
   test: {
-    environment: 'happy-dom',
+    environment: 'jsdom',
     globals: true,
     setupFiles: ['./src/test-setup.ts'],
     coverage: {
