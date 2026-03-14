@@ -63,8 +63,8 @@ pub enum ConnectionError {
     #[error("Authentication failed: {reason}")]
     AuthFailed { reason: String },
 
-    #[error("Host key verification failed for {host}")]
-    HostKeyMismatch { host: String },
+    #[error("Host key verification failed for {host}:{port}")]
+    HostKeyMismatch { host: String, port: u16 },
 
     #[error("Connection timed out after {timeout:?}")]
     Timeout { timeout: Duration },

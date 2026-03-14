@@ -34,8 +34,9 @@ use tacoshell_core::profile::types::ConnectionProfile;
 /// - `USER_PASSWORD=<pass>`   — password for that user
 /// - `PUBLIC_KEY=<pub_key>`   — inject an authorized key
 const SSHD_IMAGE: &str = "lscr.io/linuxserver/openssh-server";
-/// Pinned to a specific digest for deterministic, non-breaking test runs.
-/// Update this tag when intentionally upgrading the test image.
+/// Pinned to a specific tag for reproducible test runs.
+/// Note: this is a mutable tag, not a digest pin. Update intentionally when
+/// upgrading the test image.
 const SSHD_TAG: &str = "version-9.6_p1-r1-ls175";
 const SSHD_PORT: u16 = 2222;
 
@@ -56,7 +57,7 @@ async fn start_sshd_password() -> (
         .with_env_var("PASSWORD_ACCESS", "true")
         .with_env_var("USER_NAME", TEST_USER)
         .with_env_var("USER_PASSWORD", TEST_PASSWORD)
-        // Disable strict host-key checking inside the container itself.
+        // Disable passwordless sudo for the test user (unrelated to SSH auth).
         .with_env_var("SUDO_ACCESS", "false")
         .with_wait_for(WaitFor::message_on_stderr("Server listening on"))
         .start()

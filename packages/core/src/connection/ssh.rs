@@ -18,14 +18,19 @@
 //! Subsequent connections that present a *different* key are rejected with
 //! [`ConnectionError::HostKeyMismatch`].
 //!
+//! TOFU state is kept in the `SshAdapter` instance (and survives calls to
+//! [`ConnectionAdapter::reconnect`] on that same instance). It is **not**
+//! shared across independent `SshAdapter::connect` calls; each new adapter
+//! starts with an empty known-key store.
+//!
 //! With [`HostKeyPolicy::AcceptAll`], every key is accepted without
 //! comparison (useful for testing; not recommended in production).
 //!
 //! # Keepalive
 //!
-//! [`SshSettings::keepalive_secs`] maps directly to `russh::client::Config
-//! ::keepalive_interval`. The `russh` session loop sends SSH keepalive
-//! messages automatically.
+//! [`SshSettings::keepalive_secs`] maps directly to
+//! `russh::client::Config::keepalive_interval`. The `russh` session loop
+//! sends SSH keepalive messages automatically.
 
 use std::collections::HashMap;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -130,6 +135,7 @@ impl russh::client::Handler for SshClientHandler {
                     Some(stored) if stored == &key_bytes => Ok(true),
                     Some(_) => Err(ConnectionError::HostKeyMismatch {
                         host: self.host.clone(),
+                        port: self.port,
                     }),
                 }
             }
@@ -307,11 +313,23 @@ async fn connect_inner(
                 msg = ch.wait() => {
                     match msg {
                         Some(russh::ChannelMsg::Data { data }) => {
-                            if output_tx.send(data.to_vec()).await.is_err() {
-                                // Output receiver was dropped; close the SSH
-                                // channel so the server learns immediately.
-                                let _ = ch.close().await;
-                                break;
+                            use tokio::sync::mpsc::error::TrySendError;
+                            match output_tx.try_send(data.to_vec()) {
+                                Ok(()) => {}
+                                Err(TrySendError::Full(_)) => {
+                                    // Consumer is falling behind; drop this
+                                    // chunk to keep the session alive (same
+                                    // behaviour as a real terminal under
+                                    // backpressure — data is lost rather than
+                                    // blocking the task indefinitely).
+                                }
+                                Err(TrySendError::Closed(_)) => {
+                                    // Output receiver was dropped; close the
+                                    // SSH channel so the server learns
+                                    // immediately.
+                                    let _ = ch.close().await;
+                                    break;
+                                }
                             }
                         }
                         Some(russh::ChannelMsg::ExitStatus { .. })
@@ -376,14 +394,16 @@ impl ConnectionAdapter for SshAdapter {
     }
 
     async fn disconnect(&mut self) -> Result<(), ConnectionError> {
-        // Ask the background task to close the shell channel.
+        // Ask the background task to close the shell channel.  The send and
+        // the underlying SSH disconnect are best-effort: errors are
+        // intentionally ignored because we are tearing down regardless.
         let _ = self.shell_tx.send(ShellCmd::Close).await;
-        // Send the SSH disconnect message.
         let handle = self.handle.lock().await;
         let _ = handle
             .disconnect(russh::Disconnect::ByApplication, "", "en-US")
             .await;
-        self.alive.store(false, Ordering::Relaxed);
+        // Release ordering pairs with the Acquire load in is_alive().
+        self.alive.store(false, Ordering::Release);
         Ok(())
     }
 
@@ -397,6 +417,8 @@ impl ConnectionAdapter for SshAdapter {
         let profile = self.profile.clone();
         let credential = self.credential.clone();
         let known_keys = Arc::clone(&self.known_keys);
+        // Disconnect errors are intentionally ignored: the old transport may
+        // already be dead, and we are about to replace it anyway.
         let _ = self.disconnect().await;
         let new = connect_inner(profile, credential, known_keys).await?;
         *self = new;
@@ -454,11 +476,13 @@ impl TerminalAdapter for SshAdapter {
         let mut exit_code = None;
         let mut ch = channel;
 
-        // Collect output until the channel is fully closed.
-        // We handle `Eof` and `Close` separately: `Eof` signals no more data
-        // from the server but the exit status / close message may still follow;
-        // `Close` (or `None`) means the channel is gone and we stop.
-        let mut got_eof = false;
+        // Collect output until the channel signals it is done.
+        //
+        // Standard server ordering is: Data* → ExitStatus → Eof → Close.
+        // Breaking on `Eof` is safe because all data and the exit status
+        // will have arrived before the server sends EOF.  Waiting for
+        // `Close` instead risks hanging indefinitely if the server sends
+        // `Eof` but then delays or omits `Close`.
         loop {
             match ch.wait().await {
                 Some(russh::ChannelMsg::Data { data }) => {
@@ -470,21 +494,8 @@ impl TerminalAdapter for SshAdapter {
                 Some(russh::ChannelMsg::ExitStatus { exit_status }) => {
                     exit_code = Some(exit_status);
                 }
-                Some(russh::ChannelMsg::Eof) => {
-                    got_eof = true;
-                    // Exit status often arrives after Eof. Keep reading until
-                    // we get it or the channel closes.
-                    if exit_code.is_some() {
-                        break;
-                    }
-                }
-                Some(russh::ChannelMsg::Close) | None => break,
+                Some(russh::ChannelMsg::Eof) | Some(russh::ChannelMsg::Close) | None => break,
                 _ => {}
-            }
-            // If the server sent Eof and we already have an exit status,
-            // there is nothing more to collect.
-            if got_eof && exit_code.is_some() {
-                break;
             }
         }
 
@@ -630,8 +641,9 @@ mod tests {
         let result = h2.check_server_key(&pub2).await;
 
         match result {
-            Err(ConnectionError::HostKeyMismatch { host }) => {
+            Err(ConnectionError::HostKeyMismatch { host, port }) => {
                 assert_eq!(host, "host.example.com");
+                assert_eq!(port, 22);
             }
             other => panic!("expected HostKeyMismatch, got {other:?}"),
         }
