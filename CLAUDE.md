@@ -102,6 +102,18 @@ Follow Conventional Commits: `feat:`, `fix:`, `test:`, `docs:`, `chore:`, `refac
 - New GitHub API calls must not request scopes beyond `repo` and `read:user`
 - Run `cargo audit` before merging any dependency changes
 
+## No Suppression Policy (Non-negotiable)
+
+Never suppress, silence, or ignore any warning, error, or alert — fix it or refactor the code. This applies to all languages and tooling:
+
+- **TypeScript/ESLint:** No `eslint-disable`, `eslint-disable-next-line`, `@ts-ignore`, or `@ts-expect-error`
+- **Rust:** No `#[allow(...)]` Clippy attributes in non-test production code — fix the underlying issue
+- **Tests:** No `console.error = ...` or `console.warn = ...` patches in test setup files — fix the root cause (e.g. switch test environments, fix component accessibility, update the tool)
+- **Git:** Never use `--no-verify` to skip hooks — fix what the hook is reporting
+- **General:** No `// TODO: remove once upstream fixes...` workarounds left unresolved — either fix it now or open a tracked issue
+
+If a tool produces a false-positive, fix the root cause (e.g. switch to a more compatible test environment, add a proper type, restructure the code) rather than silencing the warning.
+
 ## Current Phase
 
 See `TODO.md` for the active task list. Check off items as they are completed.

@@ -5,8 +5,7 @@ export type VaultItemType = 'connection_profile' | 'ssh_key' | 'password' | 'kub
 export interface VaultItem {
   id: string
   type: VaultItemType
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  payload: Record<string, any>
+  payload: Record<string, unknown>
   createdAt: string
   updatedAt: string
 }
